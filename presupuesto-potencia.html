@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Presupuesto de Potencia - TelecomCalc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0F766E',
+                        'secondary': '#FDBA74',
+                        'bg-dark-soft': '#1E293B',
+                        'text-light': '#F8FAFC',
+                        'text-dark': '#1E293B',
+                        'header-footer': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .light-mode { background-color: #F8FAFC; color: #1E293B; }
+        .dark .light-mode { background-color: #1E293B; color: #F8FAFC; }
+        .fade-in { animation: fadeIn 0.35s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        
+        /* Estilos para el diagrama del circuito */
+        .circuit-element {
+            padding: 12px 20px;
+            margin: 8px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            cursor: move;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .circuit-element:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .circuit-element.loss {
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        }
+        .circuit-element.gain {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+        .circuit-element.dragging {
+            opacity: 0.5;
+        }
+        .circuit-container {
+            min-height: 200px;
+            border: 2px dashed #CBD5E1;
+            border-radius: 12px;
+            padding: 20px;
+            background: linear-gradient(to right, rgba(15,118,110,0.05), rgba(253,186,116,0.05));
+        }
+        .dark .circuit-container {
+            border-color: #475569;
+            background: linear-gradient(to right, rgba(15,118,110,0.1), rgba(253,186,116,0.1));
+        }
+        .element-value {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        .total-display {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%);
+            color: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .viable { background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important; }
+        .no-viable { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important; }
+        
+        /* Tabs para Cable Coaxial / Fibra Óptica */
+        .tab-button {
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .tab-button.active {
+            background: #0F766E;
+            color: white;
+            border-color: #0F766E;
+        }
+        .tab-button:not(.active) {
+            background: #E5E7EB;
+            color: #6B7280;
+        }
+        .dark .tab-button:not(.active) {
+            background: #374151;
+            color: #9CA3AF;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="light-mode">
+
+    <header class="sticky top-0 z-40 bg-header-footer shadow-lg dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center w-full">
+            <div class="flex items-center">
+                <a href="index.html" class="flex items-center text-3xl font-bold text-primary dark:text-secondary hover:text-secondary dark:hover:text-primary transition duration-200">
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zm0 14c-3.313 0-6-2.687-6-6s2.687-6 6-6 6 2.687 6 6-2.687 6-6 6zm-1-8h2v-2h-2v2zm0 4h2v-2h-2v2z"/></svg>
+                    TelecomCalc
+                </a>
+            </div>
+            <div class="flex items-center space-x-3 ml-auto">
+                <button id="themeToggle" class="flex items-center p-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-inner hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300"></button>
+                <a href="index.html" class="px-3 py-2 text-sm font-semibold rounded-full text-white bg-primary dark:bg-secondary hover:bg-teal-700 transition duration-200 shadow-md">Todas las Calculadoras</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <section class="fade-in">
+            <div class="bg-gray-100 dark:bg-gray-700 p-6 rounded-xl shadow-inner mb-6">
+                <h1 class="text-4xl font-extrabold text-primary dark:text-secondary mb-2">Presupuesto de Potencia</h1>
+                <p class="text-gray-700 dark:text-gray-300 mb-4 text-base leading-relaxed">
+                    Calcula la potencia recibida en un enlace de comunicación considerando todas las ganancias y pérdidas. Visualiza el circuito en tiempo real y arrastra elementos para reordenarlos.
+                </p>
+                <details class="mt-2 rounded-lg overflow-hidden">
+                    <summary class="cursor-pointer select-none px-4 py-3 bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200 font-semibold">📘 Explicación detallada</summary>
+                    <div class="px-4 py-4 bg-white dark:bg-bg-dark-soft text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                        <p><b>P_TX</b>: Potencia de salida del transmisor en dBm.</p>
+                        <p><b>L_cables</b>, <b>L_conectores</b>, <b>L_pasivos</b>: pérdidas en dB de cada elemento (se restan).</p>
+                        <p><b>G_amp</b>: ganancias de amplificadores (se suman).</p>
+                        <p><b>Verificación</b>: enlace viable si <b>P_RX ≥ S_RX + M</b>, donde <b>S_RX</b> es la sensibilidad del receptor y <b>M</b> el margen.</p>
+                        <hr class="border-gray-200 dark:border-gray-700">
+                        <p><b>Ejemplo rápido</b>: P_TX=10 dBm, pérdidas totales=12 dB, ganancia=20 dB ⇒ P_RX=18 dBm. Si S_RX=-20 dBm y M=3 dB ⇒ -17 dBm. Como 18 ≥ -17, el enlace es <b>viable</b>.</p>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Tabs: Cable Coaxial / Fibra Óptica -->
+            <div class="mb-6">
+                <div class="flex space-x-2 border-b-2 border-gray-300 dark:border-gray-600">
+                    <button class="tab-button active" data-tab="coaxial" onclick="switchTab('coaxial')">📡 Cable Coaxial</button>
+                    <button class="tab-button" data-tab="fibra" onclick="switchTab('fibra')">💡 Fibra Óptica</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Panel Izquierdo: Parámetros y Elementos -->
+                <div class="space-y-6">
+                    <!-- Parámetros Básicos -->
+                    <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">Parámetros Básicos</h3>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">P<sub>TX</sub> - Potencia del Transmisor (dBm)</label>
+                                <input type="number" id="Ptx" value="10" step="0.1" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600" onchange="calculate()">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">S<sub>RX</sub> - Sensibilidad del Receptor (dBm)</label>
+                                <input type="number" id="Srx" value="-30" step="0.1" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600" onchange="calculate()">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">M - Margen de Seguridad (dB)</label>
+                                <input type="number" id="Margen" value="3" step="0.1" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600" onchange="calculate()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Cable Coaxial -->
+                    <div id="tab-coaxial" class="tab-content active">
+                        <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                            <h3 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">Agregar Elementos (Cable Coaxial)</h3>
+                            
+                            <!-- G_amp: Amplificadores (Suman) -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-green-600 dark:text-green-400 mb-2">➕ G<sub>amp</sub> - Ganancias de Amplificadores</h4>
+                                <button onclick="addAmplificador('coaxial')" class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">+ Agregar Amplificador</button>
+                                <p class="text-xs text-gray-500 mt-1">Los amplificadores suman ganancia al presupuesto.</p>
+                            </div>
+
+                            <!-- L_cable: Pérdidas Cable Coaxial -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-red-600 dark:text-red-400 mb-2">➖ L<sub>cables</sub> - Pérdidas en Cable Coaxial</h4>
+                                <button onclick="addCable('coaxial')" class="w-full mb-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">+ Agregar Cable</button>
+                                <p class="text-xs text-gray-500 mt-1">Atenuación en dB/m. Puedes agregar múltiples cables.</p>
+                            </div>
+
+                            <!-- L_conectores: Conectores -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-orange-600 dark:text-orange-400 mb-2">🔌 L<sub>conectores</sub> - Pérdidas por Conectores</h4>
+                                <button onclick="addConector('coaxial')" class="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">+ Agregar Conector</button>
+                                <p class="text-xs text-gray-500 mt-1">Selecciona 0.2dB, 0.5dB o 1dB por conector.</p>
+                            </div>
+
+                            <!-- L_pasivos: Divisores/Splitters -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-purple-600 dark:text-purple-400 mb-2">📊 L<sub>pasivos</sub> - Pérdidas por Elementos Pasivos</h4>
+                                <button onclick="addPasivo('coaxial')" class="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">+ Agregar Divisor</button>
+                                <p class="text-xs text-gray-500 mt-1">Relaciones: 1:2 a 1:128 o valor personalizado.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Fibra Óptica -->
+                    <div id="tab-fibra" class="tab-content">
+                        <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                            <h3 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">Agregar Elementos (Fibra Óptica)</h3>
+                            
+                            <!-- G_amp: Amplificadores (Suman) -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-green-600 dark:text-green-400 mb-2">➕ G<sub>amp</sub> - Ganancias de Amplificadores Ópticos</h4>
+                                <button onclick="addAmplificador('fibra')" class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">+ Agregar Amplificador EDFA/SOA</button>
+                                <p class="text-xs text-gray-500 mt-1">Amplificadores EDFA o SOA para compensar pérdidas.</p>
+                            </div>
+
+                            <!-- L_cable: Pérdidas Fibra -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-red-600 dark:text-red-400 mb-2">➖ L<sub>cables</sub> - Pérdidas en Fibra Óptica</h4>
+                                <button onclick="addCable('fibra')" class="w-full mb-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">+ Agregar Fibra</button>
+                                <p class="text-xs text-gray-500 mt-1">Atenuación en dB/km. Puedes agregar múltiples tramos de fibra.</p>
+                            </div>
+
+                            <!-- L_conectores: Conectores -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-orange-600 dark:text-orange-400 mb-2">🔌 L<sub>conectores</sub> - Pérdidas por Conectores</h4>
+                                <button onclick="addConector('fibra')" class="w-full mb-2 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">+ Agregar Conector</button>
+                                <p class="text-xs text-gray-500 mt-1">Conectores SC/LC. Selecciona 0.2dB, 0.5dB o 1dB por conector.</p>
+                            </div>
+
+                            <!-- L_pasivos: Divisores Ópticos -->
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-purple-600 dark:text-purple-400 mb-2">📊 L<sub>pasivos</sub> - Pérdidas por Divisores Ópticos</h4>
+                                <button onclick="addPasivo('fibra')" class="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">+ Agregar Divisor Óptico</button>
+                                <p class="text-xs text-gray-500 mt-1">Relaciones: 1:2 (3dB) hasta 1:128 (21dB) o valor personalizado.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="space-y-3">
+                        <button onclick="document.querySelector('details').open = true; window.scrollTo({top: 0, behavior: 'smooth'});" class="w-full py-3 text-lg font-semibold rounded-lg text-white bg-indigo-500 hover:bg-indigo-600 transition duration-200 shadow-lg">
+                            📘 Explicación detallada
+                        </button>
+                        <button onclick="clearAll()" class="w-full py-2 text-sm font-medium rounded-lg text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition duration-200">
+                            🗑️ Limpiar Todo
+                        </button>
+                        <button onclick="calculate()" class="w-full py-4 text-xl font-bold rounded-lg text-white bg-secondary hover:bg-orange-500 dark:bg-primary dark:hover:bg-teal-700 transition duration-200 shadow-lg">
+                            🧮 Calcular Presupuesto de Potencia
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panel Derecho: Visualización del Circuito -->
+                <div class="space-y-6">
+                    <!-- Diagrama del Circuito -->
+                    <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">📊 Fórmula del Presupuesto</h3>
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <div class="text-center font-mono text-lg mb-2">
+                                <span class="font-bold">P<sub>RX</sub> = P<sub>TX</sub> - L<sub>cables</sub> - L<sub>conectores</sub> - L<sub>pasivos</sub> + G<sub>amp</sub></span>
+                            </div>
+                            <div class="text-center text-sm text-gray-600 dark:text-gray-400 mt-3">
+                                Verificación: <span class="font-bold">P<sub>RX</sub> ≥ S<sub>RX</sub> + M</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Elementos -->
+                    <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">Elementos del Enlace</h3>
+                        <div id="elementsList" class="space-y-2 min-h-[200px]">
+                            <p class="text-center text-gray-500">Agrega elementos para comenzar</p>
+                        </div>
+                    </div>
+
+                    <!-- Resultados -->
+                    <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">Resultados</h3>
+                        <div id="results" class="space-y-3">
+                            <div class="flex justify-between p-3 bg-gray-100 dark:bg-gray-700 rounded">
+                                <span>P<sub>TX</sub> (Potencia del Tx):</span>
+                                <span id="result-ptx" class="font-bold">-- dBm</span>
+                            </div>
+                            <div class="flex justify-between p-3 bg-green-100 dark:bg-green-900/30 rounded">
+                                <span>+ G<sub>amp</sub> (Ganancias):</span>
+                                <span id="result-gain" class="font-bold text-green-600 dark:text-green-400">-- dB</span>
+                            </div>
+                            <div class="flex justify-between p-3 bg-red-100 dark:bg-red-900/30 rounded">
+                                <span>- L<sub>cables</sub> (Pérdidas en Cables):</span>
+                                <span id="result-lcables" class="font-bold text-red-600 dark:text-red-400">-- dB</span>
+                            </div>
+                            <div class="flex justify-between p-3 bg-red-100 dark:bg-red-900/30 rounded">
+                                <span>- Pérdidas Conectores (L<sub>conectores</sub>):</span>
+                                <span id="result-lconectores" class="font-bold text-red-600 dark:text-red-400">-- dB</span>
+                            </div>
+                            <div class="flex justify-between p-3 bg-red-100 dark:bg-red-900/30 rounded">
+                                <span>- Pérdidas Pasivos (L<sub>pasivos</sub>):</span>
+                                <span id="result-lpasivos" class="font-bold text-red-600 dark:text-red-400">-- dB</span>
+                            </div>
+                            <hr class="my-4 border-gray-300 dark:border-gray-600">
+                            <div class="flex justify-between p-3 bg-blue-100 dark:bg-blue-900/30 rounded">
+                                <span class="font-semibold">P<sub>RX</sub> (Potencia Recibida):</span>
+                                <span id="result-prx" class="font-bold text-blue-600 dark:text-blue-400 text-xl">-- dBm</span>
+                            </div>
+                            <div class="flex justify-between p-3 bg-gray-100 dark:bg-gray-700 rounded">
+                                <span>S<sub>RX</sub> (Sensibilidad del Rx):</span>
+                                <span id="result-srx" class="font-bold">-- dBm</span>
+                            </div>
+                            <div class="flex justify-between p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded">
+                                <span>Margen (M):</span>
+                                <span id="result-margen" class="font-bold text-yellow-600 dark:text-yellow-400">-- dB</span>
+                            </div>
+                            <div id="result-viable" class="p-4 rounded-lg text-center font-bold text-xl mt-4">
+                                -- ESTADO --
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-10 py-6 bg-header-footer dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-300 text-sm">
+            <p>&copy; 2025 TelecomCalc. Contacto: +57 310 4535196</p>
+        </div>
+    </footer>
+
+    <script>
+let elements = [];
+let currentTab = 'coaxial';
+let elementIdCounter = 1;
+
+// Prefijos métricos para longitud
+const PREFIXES = {
+    'pm': 1e-12, 'nm': 1e-9, 'µm': 1e-6, 'mm': 1e-3, 
+    'cm': 1e-2, 'dm': 1e-1, 'm': 1, 'dam': 10, 'hm': 100, 'km': 1000
+};
+
+// ===== FUNCIONES DE TABS =====
+function switchTab(tab) {
+    currentTab = tab;
+    // Actualizar botones de tabs
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tab) btn.classList.add('active');
+    });
+    // Actualizar contenidos de tabs
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    const activeTab = document.getElementById('tab-' + tab);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+}
+
+// ===== AGREGAR ELEMENTOS =====
+function addCable(tipo) {
+    const id = elementIdCounter++;
+    const unit = tipo === 'coaxial' ? 'm' : 'km';
+    const attUnit = tipo === 'coaxial' ? 'dB/m' : 'dB/km';
+    const defaultLength = tipo === 'coaxial' ? 100 : 10;
+    const defaultAtt = tipo === 'coaxial' ? 0.2 : 0.25;
+    
+    // Calcular pérdida inicial
+    let initialLoss;
+    if (tipo === 'coaxial') {
+        // Coaxial: longitud en metros, atenuación en dB/m
+        initialLoss = defaultLength * defaultAtt;
+    } else {
+        // Fibra: longitud en km, atenuación en dB/km
+        initialLoss = defaultLength * defaultAtt;
+    }
+    
+    elements.push({
+        id, tipo, category: 'cable',
+        name: tipo === 'coaxial' ? 'Cable Coaxial' : 'Fibra Óptica',
+        length: defaultLength,
+        lengthUnit: unit,
+        lengthPrefix: tipo === 'coaxial' ? 'm' : 'km',
+        attenuation: defaultAtt,
+        attUnit: attUnit,
+        loss: initialLoss
+    });
+    renderElements();
+    calculate();
+}
+
+function addConector(tipo) {
+    const id = elementIdCounter++;
+    const defaultLoss = tipo === 'coaxial' ? 0.5 : 0.3;
+    
+    elements.push({
+        id, tipo, category: 'conector',
+        name: tipo === 'coaxial' ? 'Conector' : 'Conector SC/LC',
+        count: 1,
+        lossPerUnit: defaultLoss,
+        loss: defaultLoss,
+        lossOptions: [0.2, 0.5, 1.0]
+    });
+    renderElements();
+    calculate();
+}
+
+function addPasivo(tipo) {
+    const id = elementIdCounter++;
+    
+    elements.push({
+        id, tipo, category: 'pasivo',
+        name: tipo === 'coaxial' ? 'Divisor' : 'Divisor Óptico',
+        loss: 3,
+        ratio: '1:2',
+        ratioOptions: {
+            '0': 0, '1:2': 3, '1:4': 6, '1:8': 9,
+            '1:16': 12, '1:32': 15, '1:64': 18, '1:128': 21
+        },
+        customLoss: false
+    });
+    renderElements();
+    calculate();
+}
+
+function addAmplificador(tipo) {
+    const id = elementIdCounter++;
+    const defaultGain = tipo === 'coaxial' ? 20 : 25;
+    
+    elements.push({
+        id, tipo, category: 'amplificador',
+        name: tipo === 'coaxial' ? 'Amplificador' : 'Amplificador EDFA/SOA',
+        gain: defaultGain
+    });
+    renderElements();
+    calculate();
+}
+
+// ===== ACTUALIZAR VALORES =====
+function updateCableLength(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        el.length = parseFloat(value) || 0;
+        // Convertir longitud a la unidad de atenuación
+        let lengthInAttUnit;
+        if (el.tipo === 'coaxial') {
+            // Coaxial: convertir a metros (unidad de atenuación)
+            lengthInAttUnit = el.length * (PREFIXES[el.lengthPrefix] || 1);
+        } else {
+            // Fibra: convertir a kilómetros (unidad de atenuación)
+            lengthInAttUnit = el.length * (PREFIXES[el.lengthPrefix] || 1) / 1000;
+        }
+        el.loss = lengthInAttUnit * el.attenuation;
+        renderElements();
+        calculate();
+    }
+}
+
+function updateCableLengthPrefix(id, prefix) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        el.lengthPrefix = prefix;
+        // Recalcular pérdida con nuevo prefijo
+        let lengthInAttUnit;
+        if (el.tipo === 'coaxial') {
+            // Coaxial: convertir a metros (unidad de atenuación)
+            lengthInAttUnit = el.length * (PREFIXES[prefix] || 1);
+        } else {
+            // Fibra: convertir a kilómetros (unidad de atenuación)
+            lengthInAttUnit = el.length * (PREFIXES[prefix] || 1) / 1000;
+        }
+        el.loss = lengthInAttUnit * el.attenuation;
+        renderElements();
+        calculate();
+    }
+}
+
+function updateCableAttenuation(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        el.attenuation = parseFloat(value) || 0;
+        // Convertir longitud a la unidad de atenuación
+        let lengthInAttUnit;
+        if (el.tipo === 'coaxial') {
+            // Coaxial: convertir a metros (unidad de atenuación)
+            lengthInAttUnit = el.length * (PREFIXES[el.lengthPrefix] || 1);
+        } else {
+            // Fibra: convertir a kilómetros (unidad de atenuación)
+            lengthInAttUnit = el.length * (PREFIXES[el.lengthPrefix] || 1) / 1000;
+        }
+        el.loss = lengthInAttUnit * el.attenuation;
+        renderElements();
+        calculate();
+    }
+}
+
+function updateConectorCount(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        el.count = parseInt(value) || 0;
+        el.loss = el.count * el.lossPerUnit;
+        renderElements();
+        calculate();
+    }
+}
+
+function updateConectorLoss(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        el.lossPerUnit = parseFloat(value);
+        el.loss = el.count * el.lossPerUnit;
+        renderElements();
+        calculate();
+    }
+}
+
+function updatePasivoRatio(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        if (value === 'custom') {
+            el.customLoss = true;
+            el.ratio = 'custom';
+        } else {
+            el.customLoss = false;
+            el.ratio = value;
+            el.loss = el.ratioOptions[value];
+        }
+        renderElements();
+        calculate();
+    }
+}
+
+function updatePasivoCustomLoss(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el && el.customLoss) {
+        el.loss = parseFloat(value) || 0;
+        renderElements();
+        calculate();
+    }
+}
+
+function updateAmplificadorGain(id, value) {
+    const el = elements.find(e => e.id === id);
+    if (el) {
+        el.gain = parseFloat(value) || 0;
+        renderElements();
+        calculate();
+    }
+}
+
+function removeElement(id) {
+    elements = elements.filter(e => e.id !== id);
+    renderElements();
+    calculate();
+}
+
+// ===== RENDERIZAR ELEMENTOS =====
+function renderElements() {
+    const container = document.getElementById('elementsList');
+    if (elements.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500">Agrega elementos para comenzar</p>';
+        return;
+    }
+
+    let html = '';
+    elements.forEach(el => {
+        const bgColor = el.category === 'amplificador' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30';
+        const icon = el.category === 'amplificador' ? '📈' : '📉';
+        
+        html += `<div class="${bgColor} p-3 rounded-lg">`;
+        html += `<div class="flex justify-between items-center mb-2">`;
+        html += `<span class="font-semibold">${icon} ${el.name}</span>`;
+        html += `<button onclick="removeElement(${el.id})" class="text-red-500 hover:text-red-700 font-bold">✕</button>`;
+        html += `</div>`;
+
+        // Inputs según categoría
+        if (el.category === 'cable') {
+            html += `<div class="grid grid-cols-3 gap-2 text-sm">`;
+            html += `<div><label class="text-xs">Longitud:</label>`;
+            html += `<input type="number" value="${el.length}" step="0.1" class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updateCableLength(${el.id}, this.value)"></div>`;
+            html += `<div><label class="text-xs">Unidad:</label>`;
+            html += `<select class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updateCableLengthPrefix(${el.id}, this.value)">`;
+            Object.keys(PREFIXES).forEach(prefix => {
+                const selected = prefix === el.lengthPrefix ? 'selected' : '';
+                html += `<option value="${prefix}" ${selected}>${prefix}</option>`;
+            });
+            html += `</select></div>`;
+            html += `<div><label class="text-xs">Atenuación (${el.attUnit}):</label>`;
+            html += `<input type="number" value="${el.attenuation}" step="0.01" class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updateCableAttenuation(${el.id}, this.value)"></div>`;
+            html += `</div>`;
+            html += `<div class="mt-2 text-xs font-bold text-red-600">Pérdida Total: ${el.loss.toFixed(3)} dB</div>`;
+        } else if (el.category === 'conector') {
+            html += `<div class="grid grid-cols-2 gap-2 text-sm">`;
+            html += `<div><label class="text-xs">Cantidad:</label>`;
+            html += `<input type="number" value="${el.count}" min="1" class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updateConectorCount(${el.id}, this.value)"></div>`;
+            html += `<div><label class="text-xs">Pérdida/unidad:</label>`;
+            html += `<select class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updateConectorLoss(${el.id}, this.value)">`;
+            el.lossOptions.forEach(opt => {
+                const selected = opt === el.lossPerUnit ? 'selected' : '';
+                html += `<option value="${opt}" ${selected}>${opt} dB</option>`;
+            });
+            html += `</select></div>`;
+            html += `</div>`;
+            html += `<div class="mt-2 text-xs font-bold text-red-600">Pérdida Total: ${el.loss.toFixed(2)} dB</div>`;
+        } else if (el.category === 'pasivo') {
+            html += `<div class="text-sm space-y-2">`;
+            html += `<div><label class="text-xs">Relación:</label>`;
+            html += `<select class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updatePasivoRatio(${el.id}, this.value)">`;
+            Object.keys(el.ratioOptions).forEach(ratio => {
+                const selected = ratio === el.ratio ? 'selected' : '';
+                html += `<option value="${ratio}" ${selected}>${ratio} (${el.ratioOptions[ratio]} dB)</option>`;
+            });
+            html += `<option value="custom" ${el.customLoss ? 'selected' : ''}>Personalizado</option>`;
+            html += `</select></div>`;
+            if (el.customLoss) {
+                html += `<div><label class="text-xs">Pérdida personalizada (dB):</label>`;
+                html += `<input type="number" value="${el.loss}" step="0.1" class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updatePasivoCustomLoss(${el.id}, this.value)"></div>`;
+            }
+            html += `</div>`;
+            html += `<div class="mt-2 text-xs font-bold text-red-600">Pérdida: ${el.loss.toFixed(2)} dB</div>`;
+        } else if (el.category === 'amplificador') {
+            html += `<div class="text-sm">`;
+            html += `<label class="text-xs">Ganancia (dB):</label>`;
+            html += `<input type="number" value="${el.gain}" step="0.1" class="w-full p-1 border rounded text-sm dark:bg-gray-700" onchange="updateAmplificadorGain(${el.id}, this.value)">`;
+            html += `</div>`;
+            html += `<div class="mt-2 text-xs font-bold text-green-600">Ganancia: +${el.gain.toFixed(2)} dB</div>`;
+        }
+
+        html += `</div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// ===== CALCULAR =====
+function calculate() {
+    const Ptx = parseFloat(document.getElementById('Ptx').value) || 0;
+    const Srx = parseFloat(document.getElementById('Srx').value) || 0;
+    const margenDeseado = parseFloat(document.getElementById('Margen').value) || 0;
+
+    let totalGain = 0;
+    let totalLossCables = 0;
+    let totalLossConectores = 0;
+    let totalLossPasivos = 0;
+
+    elements.forEach(el => {
+        if (el.category === 'amplificador') {
+            totalGain += el.gain;
+        } else if (el.category === 'cable') {
+            totalLossCables += el.loss;
+        } else if (el.category === 'conector') {
+            totalLossConectores += el.loss;
+        } else if (el.category === 'pasivo') {
+            totalLossPasivos += el.loss;
+        }
+    });
+
+    // Prx = Ptx - Lcables - Lconectores - Lpasivos + Gamp
+    const Prx = Ptx - totalLossCables - totalLossConectores - totalLossPasivos + totalGain;
+    
+    // Margen calculado = Prx - Srx
+    const margenCalculado = Prx - Srx;
+    
+    // Viable si Prx >= Srx + MargenDeseado
+    const viable = Prx >= (Srx + margenDeseado);
+
+    // Actualizar resultados
+    document.getElementById('result-ptx').textContent = Ptx.toFixed(2) + ' dBm';
+    document.getElementById('result-gain').textContent = '+' + totalGain.toFixed(2) + ' dB';
+    document.getElementById('result-lcables').textContent = '-' + totalLossCables.toFixed(2) + ' dB';
+    document.getElementById('result-lconectores').textContent = '-' + totalLossConectores.toFixed(2) + ' dB';
+    document.getElementById('result-lpasivos').textContent = '-' + totalLossPasivos.toFixed(2) + ' dB';
+    document.getElementById('result-prx').textContent = Prx.toFixed(2) + ' dBm';
+    document.getElementById('result-srx').textContent = Srx.toFixed(2) + ' dBm';
+    document.getElementById('result-margen').textContent = margenCalculado.toFixed(2) + ' dB';
+
+    const viableEl = document.getElementById('result-viable');
+    if (viable) {
+        viableEl.textContent = '✅ ENLACE VIABLE';
+        viableEl.className = 'p-4 rounded-lg text-center font-bold text-xl mt-4 bg-green-500 text-white';
+    } else {
+        viableEl.textContent = '❌ ENLACE NO VIABLE';
+        viableEl.className = 'p-4 rounded-lg text-center font-bold text-xl mt-4 bg-red-500 text-white';
+    }
+}
+
+// ===== CARGAR EJEMPLO =====
+function loadExample() {
+    elements = [];
+    
+    if (currentTab === 'coaxial') {
+        document.getElementById('Ptx').value = '20';
+        document.getElementById('Srx').value = '-95';
+        document.getElementById('Margen').value = '3';
+        
+        // Cable 1
+        elements.push({
+            id: elementIdCounter++, tipo: 'coaxial', category: 'cable',
+            name: 'Cable Coaxial', length: 50, lengthPrefix: 'm',
+            lengthUnit: 'm',
+            attenuation: 0.15, attUnit: 'dB/m', loss: 50 * 0.15  // 7.5 dB
+        });
+        
+        // Conector 1
+        elements.push({
+            id: elementIdCounter++, tipo: 'coaxial', category: 'conector',
+            name: 'Conector', count: 1, lossPerUnit: 0.5, loss: 0.5,
+            lossOptions: [0.2, 0.5, 1.0]
+        });
+        
+        // Amplificador
+        elements.push({
+            id: elementIdCounter++, tipo: 'coaxial', category: 'amplificador',
+            name: 'Amplificador', gain: 15
+        });
+        
+        // Cable 2
+        elements.push({
+            id: elementIdCounter++, tipo: 'coaxial', category: 'cable',
+            name: 'Cable Coaxial', length: 30, lengthPrefix: 'm',
+            lengthUnit: 'm',
+            attenuation: 0.2, attUnit: 'dB/m', loss: 30 * 0.2  // 6 dB
+        });
+        
+        // Conector 2
+        elements.push({
+            id: elementIdCounter++, tipo: 'coaxial', category: 'conector',
+            name: 'Conector', count: 1, lossPerUnit: 0.5, loss: 0.5,
+            lossOptions: [0.2, 0.5, 1.0]
+        });
+        
+        // Divisor
+        elements.push({
+            id: elementIdCounter++, tipo: 'coaxial', category: 'pasivo',
+            name: 'Divisor', loss: 3, ratio: '1:2',
+            ratioOptions: {'0': 0, '1:2': 3, '1:4': 6, '1:8': 9, '1:16': 12, '1:32': 15, '1:64': 18, '1:128': 21},
+            customLoss: false
+        });
+    } else {
+        document.getElementById('Ptx').value = '3';
+        document.getElementById('Srx').value = '-28';
+        document.getElementById('Margen').value = '3';
+        
+        // Conector 1
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'conector',
+            name: 'Conector SC/LC', count: 1, lossPerUnit: 0.3, loss: 0.3,
+            lossOptions: [0.2, 0.5, 1.0]
+        });
+        
+        // Fibra 1
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'cable',
+            name: 'Fibra Óptica', length: 15, lengthPrefix: 'km',
+            lengthUnit: 'km',
+            attenuation: 0.25, attUnit: 'dB/km', loss: 15 * 0.25  // 3.75 dB
+        });
+        
+        // Empalme (como conector)
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'conector',
+            name: 'Empalme', count: 1, lossPerUnit: 0.1, loss: 0.1,
+            lossOptions: [0.2, 0.5, 1.0]
+        });
+        
+        // Amplificador EDFA
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'amplificador',
+            name: 'Amplificador EDFA/SOA', gain: 20
+        });
+        
+        // Fibra 2
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'cable',
+            name: 'Fibra Óptica', length: 25, lengthPrefix: 'km',
+            lengthUnit: 'km',
+            attenuation: 0.3, attUnit: 'dB/km', loss: 25 * 0.3  // 7.5 dB
+        });
+        
+        // Divisor óptico
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'pasivo',
+            name: 'Divisor Óptico', loss: 6, ratio: '1:4',
+            ratioOptions: {'0': 0, '1:2': 3, '1:4': 6, '1:8': 9, '1:16': 12, '1:32': 15, '1:64': 18, '1:128': 21},
+            customLoss: false
+        });
+        
+        // Conector 2
+        elements.push({
+            id: elementIdCounter++, tipo: 'fibra', category: 'conector',
+            name: 'Conector SC/LC', count: 1, lossPerUnit: 0.3, loss: 0.3,
+            lossOptions: [0.2, 0.5, 1.0]
+        });
+    }
+    
+    renderElements();
+    calculate();
+    alert(`✅ Ejemplo cargado: ${currentTab === 'coaxial' ? 'Enlace de Radio FM' : 'Red Metropolitana de Fibra Óptica'}`);
+}
+
+// ===== LIMPIAR TODO =====
+function clearAll() {
+    if (elements.length === 0) {
+        alert('⚠️ No hay elementos para limpiar');
+        return;
+    }
+    
+    if (confirm('¿Estás seguro de que deseas eliminar todos los elementos?')) {
+        elements = [];
+        document.getElementById('Ptx').value = '10';
+        document.getElementById('Srx').value = '-30';
+        document.getElementById('Margen').value = '3';
+        renderElements();
+        calculate();
+    }
+}
+
+// ===== TEMA =====
+function toggleTheme() {
+    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.contains('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateThemeButton();
+}
+
+// ===== BÚSQUEDA =====
+const formulas = [
+    { id: '1', title: 'Ancho de Banda', file: 'calc-ancho-banda.html' },
+    { id: '2', title: 'Límite de Shannon', file: 'calc-shannon.html' },
+    { id: '3', title: 'Potencia de Ruido Térmico', file: 'calc-potencia-ruido.html' },
+    { id: '4', title: 'Voltaje de Ruido Térmico', file: 'calc-voltaje-ruido.html' },
+    { id: '5', title: 'Factor de Ruido', file: 'calc-factor-ruido.html' },
+    { id: '6', title: 'Índice de Ruido', file: 'calc-indice-ruido.html' },
+    { id: '7', title: 'Potencia → dBm', file: 'calc-potencia-dbm.html' },
+    { id: '8', title: 'dBm → Potencia', file: 'calc-dbm-potencia.html' },
+    { id: '9', title: 'Presupuesto de Potencia', file: 'presupuesto-potencia.html' },
+    { id: '10', title: 'Tasa de Error de Bits (BER)', file: 'calc-ber.html' }
+];
+
+function setupSearch() {
+    const searchInput = document.getElementById('formulaSearch');
+    const dropdown = document.getElementById('searchDropdown');
+    
+    if (!searchInput || !dropdown) return;
+    
+    function buildList(filter = '') {
+        const q = filter.trim().toLowerCase();
+        dropdown.innerHTML = '';
+        const matches = formulas.filter(f => f.title.toLowerCase().includes(q));
+        
+        matches.forEach(f => {
+            const item = document.createElement('button');
+            item.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition';
+            item.textContent = f.title;
+            item.addEventListener('click', () => {
+                window.location.href = f.file;
+            });
+            dropdown.appendChild(item);
+        });
+        
+        if (matches.length === 0) {
+            const none = document.createElement('div');
+            none.className = 'px-4 py-3 text-sm text-gray-500';
+            none.textContent = 'No se encontraron fórmulas';
+            dropdown.appendChild(none);
+        }
+    }
+    
+    searchInput.addEventListener('focus', () => { buildList(''); dropdown.classList.remove('hidden'); });
+    searchInput.addEventListener('input', (e) => { buildList(e.target.value); dropdown.classList.remove('hidden'); });
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const first = dropdown.querySelector('button');
+            if (first) first.click();
+        }
+    });
+}
+
+// ===== INICIALIZACIÓN =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar tema
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+    }
+    updateThemeButton();
+    
+    // Event listener para el botón de tema
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', toggleTheme);
+    }
+    
+    // Renderizar fórmulas con KaTeX
+    if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ]
+        });
+    }
+    
+    // Setup
+    setupSearch();
+    renderElements();
+    calculate();
+});
+
+// ===== FUNCIÓN DE ACTUALIZAR BOTÓN DE TEMA =====
+function updateThemeButton() {
+    const themeToggleBtn = document.getElementById('themeToggle');
+    if (!themeToggleBtn) return;
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    themeToggleBtn.innerHTML = isDarkMode 
+        ? '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>'
+        : '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path></svg>';
+}
+
+    </script>
+</body>
+</html>

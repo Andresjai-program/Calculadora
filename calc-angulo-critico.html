@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ángulo Crítico - TelecomCalc</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'primary':'#2563EB','secondary':'#22D3EE','bg-dark-soft':'#0B1220','text-light':'#F8FAFC','text-dark':'#0F172A','header-footer':'#0B1220' } } } };
+  </script>
+  <style>
+    body{transition:background-color .3s,color .3s}
+    .light-mode{background:#F8FAFC;color:#1E293B}
+    .dark .light-mode{background:#1E293B;color:#F8FAFC}
+    .fade-in{animation:fadeIn .35s ease both}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .formula-display{background:linear-gradient(90deg,rgba(255,255,255,.6),rgba(250,250,255,.4));border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 6px 18px rgba(15,118,110,.06)}
+    .formula-latex{font-size:1.6rem;line-height:1.3;text-align:center}
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="calc-common.js"></script>
+</head>
+<body class="light-mode">
+  <header class="sticky top-0 z-40 bg-header-footer shadow-lg dark:bg-gray-900 transition duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center w-full">
+      <a href="index.html" class="flex items-center text-3xl font-bold text-primary dark:text-secondary hover:text-secondary dark:hover:text-primary transition duration-200">
+        <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8z"/></svg>
+        TelecomCalc
+      </a>
+      <div class="flex items-center space-x-3 ml-auto">
+        <button id="themeToggle" class="flex items-center p-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"></button>
+        <a href="index.html" class="px-3 py-2 text-sm font-semibold rounded-full text-white bg-primary dark:bg-secondary">Todas las Calculadoras</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <section class="fade-in">
+      <div class="bg-gray-100 dark:bg-gray-700 p-6 rounded-xl shadow-inner">
+        <h1 class="text-4xl font-extrabold text-primary dark:text-secondary mb-2">Ángulo Crítico (Reflexión Total Interna)</h1>
+        <div class="formula-display mb-2"><div class="formula-latex">$\theta_c = \sin^{-1}\left(\dfrac{n_2}{n_1}\right)$</div></div>
+        <details class="mt-3 rounded-lg overflow-hidden">
+          <summary class="cursor-pointer select-none px-4 py-3 bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200 font-semibold">📘 Explicación detallada</summary>
+          <div class="px-4 py-4 bg-white dark:bg-bg-dark-soft text-sm text-gray-700 dark:text-gray-300 space-y-2">
+            <p><b>Ángulo crítico</b>: ángulo mínimo de incidencia en el medio 1 (más denso) para que el rayo no salga al medio 2 (menos denso) y ocurra reflexión total interna.</p>
+            <p>Aplica cuando <b>n1 &gt; n2</b>. Si n1 ≤ n2, no existe ángulo crítico.</p>
+            <p><b>Ejemplo</b>: n1=1.52 (vidrio), n2=1.0003 (aire), entonces $\theta_c=\sin^{-1}(1.0003/1.52)≈41.1°$.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 items-start">
+        <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md space-y-4">
+          <h3 class="text-xl font-semibold mb-1 text-header-footer dark:text-gray-200">Parámetros</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm mb-1">n1 (medio 1)</label>
+              <input id="n1" type="number" step="any" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700">
+            </div>
+            <div>
+              <label class="block text-sm mb-1">n2 (medio 2)</label>
+              <input id="n2" type="number" step="any" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm mb-1">Ángulo crítico θc (grados)</label>
+            <input id="thetaC" type="number" step="any" readonly class="w-full p-2 border rounded bg-gray-100 dark:bg-gray-600 font-bold">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnCalc" class="py-3 text-lg font-bold rounded-lg text-white bg-secondary hover:bg-orange-500 dark:bg-primary dark:hover:bg-teal-700">Calcular</button>
+            <button id="btnClear" class="py-3 text-sm font-medium rounded-lg text-primary bg-gray-100 dark:bg-gray-700">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-white dark:bg-bg-dark-soft p-4 rounded border border-gray-300 dark:border-gray-600">
+            <canvas id="diagram" style="width:100%;height:380px"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mt-10 py-6 bg-header-footer dark:bg-gray-900 transition duration-300"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-300 text-sm">&copy; 2025 TelecomCalc</div></footer>
+
+  <script>
+    function themeInit(){ const saved=localStorage.getItem('theme'); if(saved==='dark') document.documentElement.classList.add('dark'); updateThemeButton&&updateThemeButton(); const btn=document.getElementById('themeToggle'); if(btn) btn.addEventListener('click', toggleTheme); }
+
+    function calc(){
+      const n1 = parseFloat(document.getElementById('n1').value);
+      const n2 = parseFloat(document.getElementById('n2').value);
+      let theta = NaN;
+      if(isFinite(n1) && isFinite(n2) && n1>0 && n2>0 && n1>n2){
+        const x = n2/n1; if (x<=1) theta = Math.asin(x);
+      }
+      document.getElementById('thetaC').value = isFinite(theta)? (theta*180/Math.PI).toFixed(2): '';
+      drawDiagram(n1,n2,theta);
+    }
+    function clearAll(){ ['n1','n2','thetaC'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';}); drawDiagram(NaN,NaN,NaN); }
+
+    function drawDiagram(n1,n2,theta){
+      const canvas=document.getElementById('diagram'); const W=canvas.parentElement.clientWidth; const H=380; canvas.width=W; canvas.height=H; const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,W,H);
+      const isDark=document.documentElement.classList.contains('dark');
+      const axis=isDark?'#cbd5e1':'#334155';
+      const m1c='#ffffff';
+      const m2c='#67E8F9'; // cyan-300
+      const ray='#000000';
+      const cx=W*0.35, cy=H*0.6, len=220;
+      // interface and normal
+      ctx.strokeStyle=axis; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+      ctx.setLineDash([6,6]); ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke(); ctx.setLineDash([]);
+      // media (remove overlay to keep white top)
+      ctx.fillStyle=m1c; ctx.fillRect(0,0,W,cy);
+      ctx.fillStyle=m2c; ctx.fillRect(0,cy,W,H-cy);
+      // incident at critical (grazing refracted)
+      if(isFinite(theta)){
+        ctx.strokeStyle=ray; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx - len*Math.sin(theta), cy - len*Math.cos(theta)); ctx.lineTo(cx,cy); ctx.stroke();
+        // refracted at 90° along boundary
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+len, cy); ctx.stroke();
+      }
+      // arcs and labels
+      ctx.strokeStyle='#000000'; ctx.lineWidth=1.5; if(isFinite(theta)){ ctx.beginPath(); ctx.arc(cx,cy,40,-Math.PI/2,-Math.PI/2+theta,true); ctx.stroke(); }
+      ctx.fillStyle=isDark?'#e2e8f0':'#0f172a'; if(isFinite(n1)) ctx.fillText(`n1=${n1.toFixed(3)}`,10,16); if(isFinite(n2)) ctx.fillText(`n2=${n2.toFixed(3)}`,10,H-10);
+      if(isFinite(theta)) { const deg=(theta*180/Math.PI).toFixed(2)+'°'; ctx.fillStyle='#000000'; ctx.fillText(deg, cx+8, cy-10); }
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+      themeInit();
+      document.getElementById('btnCalc').addEventListener('click', calc);
+      document.getElementById('btnClear').addEventListener('click', clearAll);
+      ['n1','n2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input', calc); });
+      if(window.renderMathInElement){ setTimeout(()=>{ renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); },100); }
+      drawDiagram(NaN,NaN,NaN);
+    });
+  </script>
+</body>
+</html>

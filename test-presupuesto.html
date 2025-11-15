@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Test Presupuesto de Potencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Test de Funciones</h1>
+        
+        <div class="mb-6">
+            <button id="themeToggle" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                Cambiar Tema
+            </button>
+        </div>
+        
+        <div class="mb-6">
+            <button class="tab-button active" data-tab="coaxial" onclick="switchTab('coaxial')">
+                Cable Coaxial
+            </button>
+            <button class="tab-button" data-tab="fibra" onclick="switchTab('fibra')">
+                Fibra Óptica
+            </button>
+        </div>
+        
+        <div id="tab-coaxial" class="tab-content active">
+            <div class="p-4 bg-blue-100 dark:bg-blue-900 rounded">
+                <h2 class="text-xl font-bold mb-2">Tab Coaxial</h2>
+                <button onclick="addCable('coaxial')" class="px-4 py-2 bg-green-500 text-white rounded">
+                    + Agregar Cable Coaxial
+                </button>
+            </div>
+        </div>
+        
+        <div id="tab-fibra" class="tab-content">
+            <div class="p-4 bg-purple-100 dark:bg-purple-900 rounded">
+                <h2 class="text-xl font-bold mb-2">Tab Fibra Óptica</h2>
+                <button onclick="addCable('fibra')" class="px-4 py-2 bg-green-500 text-white rounded">
+                    + Agregar Fibra
+                </button>
+            </div>
+        </div>
+        
+        <div id="output" class="mt-6 p-4 bg-gray-200 dark:bg-gray-700 rounded">
+            <h3 class="font-bold mb-2">Output:</h3>
+            <pre id="outputText" class="text-sm"></pre>
+        </div>
+    </div>
+
+    <style>
+        .tab-button {
+            padding: 10px 20px;
+            margin-right: 5px;
+            border-radius: 5px;
+            background: #e5e7eb;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+
+    <script>
+        let elements = [];
+        let currentTab = 'coaxial';
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tab) btn.classList.add('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            const activeTab = document.getElementById('tab-' + tab);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+            log('Tab cambiado a: ' + tab);
+        }
+        
+        function addCable(tipo) {
+            elements.push({ tipo: tipo, name: 'Cable ' + tipo });
+            log('Cable agregado: ' + tipo);
+            log('Total elementos: ' + elements.length);
+        }
+        
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            log('Tema cambiado a: ' + (isDark ? 'Oscuro' : 'Claro'));
+        }
+        
+        function log(msg) {
+            const outputText = document.getElementById('outputText');
+            const timestamp = new Date().toLocaleTimeString();
+            outputText.textContent += `[${timestamp}] ${msg}\n`;
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeBtn = document.getElementById('themeToggle');
+            if (themeBtn) {
+                themeBtn.addEventListener('click', toggleTheme);
+                log('Event listener de tema agregado');
+            }
+            log('Página cargada correctamente');
+        });
+    </script>
+</body>
+</html>

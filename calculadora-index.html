@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Calculadoras - TelecomCalc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = {darkMode: 'class',theme: {extend: {colors: {'primary': '#0F766E','secondary': '#FDBA74','bg-dark-soft': '#1E293B','text-light': '#F8FAFC','text-dark': '#1E293B','header-footer': '#334155'}}}}</script>
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .light-mode { background-color: #F8FAFC; color: #1E293B; }
+        .dark .light-mode { background-color: #1E293B; color: #F8FAFC; }
+        .fade-in { animation: fadeIn 0.35s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    </style>
+    <script src="calc-common.js"></script>
+</head>
+<body class="light-mode">
+    <header class="sticky top-0 z-40 bg-header-footer shadow-lg dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center w-full">
+            <div class="flex items-center">
+                <a href="index.html" class="flex items-center text-3xl font-bold text-primary dark:text-secondary hover:text-secondary dark:hover:text-primary transition duration-200">
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zm0 14c-3.313 0-6-2.687-6-6s2.687-6 6-6 6 2.687 6 6-2.687 6-6 6zm-1-8h2v-2h-2v2zm0 4h2v-2h-2v2z"/></svg>
+                    TelecomCalc
+                </a>
+            </div>
+            <div class="flex items-center space-x-3 ml-auto">
+                <button id="themeToggle" class="flex items-center p-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-inner hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300"></button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <section class="fade-in">
+            <h1 class="text-4xl font-extrabold text-primary dark:text-secondary mb-6">Calculadoras de Telecomunicaciones</h1>
+            <p class="text-gray-700 dark:text-gray-300 mb-8 text-lg">Seleccione una calculadora para comenzar:</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Calculadora 1 -->
+                <a href="calc-ancho-banda.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">1. Ancho de Banda</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Calcula el rango de frecuencias que una señal ocupa o que un canal puede transportar.</p>
+                </a>
+
+                <!-- Calculadora 2 -->
+                <a href="calc-shannon.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">2. Límite de Shannon</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Establece el límite teórico máximo de información transmitida sin errores.</p>
+                </a>
+
+                <!-- Calculadora 3 -->
+                <a href="calc-potencia-ruido.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">3. Potencia de Ruido Térmico</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Calcula la potencia de ruido Johnson-Nyquist generada por agitación térmica.</p>
+                </a>
+
+                <!-- Calculadora 4 -->
+                <a href="calc-voltaje-ruido.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">4. Voltaje de Ruido Térmico</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Calcula el voltaje RMS de ruido generado por una resistencia.</p>
+                </a>
+
+                <!-- Calculadora 5 -->
+                <a href="calc-factor-ruido.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">5. Factor de Ruido</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Cuantifica la degradación de SNR introducida por un componente.</p>
+                </a>
+
+                <!-- Calculadora 6 -->
+                <a href="calc-indice-ruido.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">6. Índice de Ruido</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Expresión logarítmica (dB) del Factor de Ruido.</p>
+                </a>
+
+                <!-- Calculadora 7 -->
+                <a href="calc-potencia-dbm.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">7. Potencia → dBm</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Convierte potencia en Watts a dBm (decibel-milivatio).</p>
+                </a>
+
+                <!-- Calculadora 8 -->
+                <a href="calc-dbm-potencia.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">8. dBm → Potencia</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Convierte dBm a potencia absoluta en Watts.</p>
+                </a>
+
+                <!-- Calculadora 9 -->
+                <a href="presupuesto-potencia.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">9. Presupuesto de Potencia</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Calcula el presupuesto de enlace con visualización interactiva.</p>
+                </a>
+
+                <!-- Calculadora 10 -->
+                <a href="calc-ber.html" class="block p-6 bg-white dark:bg-bg-dark-soft rounded-lg shadow hover:shadow-lg transition-all duration-200 transform hover:scale-105 border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold text-primary dark:text-secondary mb-2">10. Tasa de Error de Bits (BER)</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Mide la proporción de bits errados en una transmisión.</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-10 py-6 bg-header-footer dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-gray-300 text-sm">
+            <div class="text-center sm:text-left space-y-1">
+                <p>&copy; Copyright 2025. Todos los derechos reservados.</p>
+                <p>Contacto: <span class="text-secondary dark:text-primary font-mono">+57 310 4535196</span></p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+        });
+    </script>
+</body>
+</html>

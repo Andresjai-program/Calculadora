@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Tasa de Error de Bits (BER) - TelecomCalc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = {darkMode: 'class',theme: {extend: {colors: {'primary': '#0F766E','secondary': '#FDBA74','bg-dark-soft': '#1E293B','text-light': '#F8FAFC','text-dark': '#1E293B','header-footer': '#334155'}}}}</script>
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .light-mode { background-color: #F8FAFC; color: #1E293B; }
+        .dark .light-mode { background-color: #1E293B; color: #F8FAFC; }
+        .fade-in { animation: fadeIn 0.35s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .formula-display {background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(250,250,255,0.4));border-radius: 12px;padding: 18px;margin-bottom: 12px;box-shadow: 0 6px 18px rgba(15,118,110,0.06);}
+        .formula-latex { font-size: 1.75rem; line-height: 1.3; text-align: center; }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="calc-common.js"></script>
+</head>
+<body class="light-mode">
+    <header class="sticky top-0 z-40 bg-header-footer shadow-lg dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center w-full">
+            <div class="flex items-center">
+                <a href="index.html" class="flex items-center text-3xl font-bold text-primary dark:text-secondary hover:text-secondary dark:hover:text-primary transition duration-200">
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zm0 14c-3.313 0-6-2.687-6-6s2.687-6 6-6 6 2.687 6 6-2.687 6-6 6zm-1-8h2v-2h-2v2zm0 4h2v-2h-2v2z"/></svg>
+                    TelecomCalc
+                </a>
+            </div>
+            <div class="flex items-center space-x-3 ml-auto">
+                <button id="themeToggle" class="flex items-center p-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-inner hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300"></button>
+                <a href="calculadora.html" class="px-3 py-2 text-sm font-semibold rounded-full text-white bg-primary dark:bg-secondary hover:bg-teal-700 transition duration-200 shadow-md">Todas las Calculadoras</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <section class="fade-in">
+            <div class="bg-gray-100 dark:bg-gray-700 p-6 rounded-xl shadow-inner">
+                <h1 class="text-4xl font-extrabold text-primary dark:text-secondary mb-2">10. Tasa de Error de Bits (BER)</h1>
+                <p class="text-gray-700 dark:text-gray-300 mb-4 text-base leading-relaxed">
+                    La Tasa de Error de Bits (BER) es una métrica de rendimiento que define la proporción de bits de datos transmitidos que se han alterado (recibido incorrectamente) debido a ruido, interferencia o distorsión en el canal.
+                </p>
+                <div class="formula-display mb-4">
+                    <div class="formula-latex">$BER = \frac{\text{Bits Errados}}{\text{Total de Bits Transmitidos}}$</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 items-start">
+                <div class="bg-white dark:bg-bg-dark-soft p-5 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-3 text-header-footer dark:text-gray-200">Parámetros de Entrada</h3>
+                    
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Bits errados</label>
+                        <input type="number" id="Errados" placeholder="Cantidad de bits recibidos incorrectamente" min="0" step="1" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Total de bits transmitidos</label>
+                        <input type="number" id="Total" placeholder="Cantidad total de bits transmitidos" min="1" step="1" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600">
+                    </div>
+
+                    <button id="btnCalc" class="w-full py-3 mt-4 text-lg font-bold rounded-lg text-white bg-secondary hover:bg-orange-500 dark:bg-primary dark:hover:bg-teal-700 transition duration-200 shadow-lg">Calcular</button>
+                    <button id="btnClear" class="w-full py-2 mt-2 text-sm font-medium rounded-lg text-primary bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">Limpiar</button>
+
+                    <div id="resultBox" class="mt-6 p-4 bg-primary/10 dark:bg-secondary/20 rounded-lg">
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-100">Resultado:</p>
+                        <p id="result" class="text-2xl font-extrabold text-primary dark:text-secondary mt-1">-</p>
+                        <p id="resultScientific" class="text-lg text-gray-600 dark:text-gray-300 mt-2"></p>
+                    </div>
+
+                    <div class="mt-6 bg-gray-50 dark:bg-bg-dark-soft p-4 rounded">
+                        <h5 class="font-semibold mb-2 text-gray-800 dark:text-gray-100">Uso y Notas</h5>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                            <b class="text-primary dark:text-secondary">Uso:</b> Es la forma principal de cuantificar la calidad de un enlace digital. Se utiliza para medir el desempeño de un sistema de comunicación en tiempo real y asegurar que se cumplen los requisitos mínimos de Calidad de Servicio (QoS).<br><br>
+                            <b class="text-primary dark:text-secondary">Notas:</b> Una BER más baja indica un mejor rendimiento del sistema. Por ejemplo, una BER de 10⁻⁶ significa que 1 bit es erróneo por cada millón transmitido. Los sistemas de telecomunicaciones modernos (Fibra, 5G) apuntan a BER de 10⁻⁹ o inferiores.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="relative w-full overflow-hidden border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                        <canvas id="chart" style="width: 100%; height: 400px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-10 py-6 bg-header-footer dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-300 text-sm">
+            <p>&copy; 2025 TelecomCalc. Contacto: +57 310 4535196</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+
+            function calcBer(vals) {
+                if (vals.Total <= 0) throw new Error("El total de bits debe ser mayor que cero.");
+                if (vals.Errados < 0 || vals.Errados > vals.Total) throw new Error("El número de bits errados debe estar entre 0 y el total de bits.");
+                return { result: vals.Errados / vals.Total, unit: "" };
+            }
+
+            document.getElementById('btnCalc').addEventListener('click', () => {
+                const Errados = parseFloat(document.getElementById('Errados').value);
+                const Total = parseFloat(document.getElementById('Total').value);
+
+                if (isNaN(Errados) || isNaN(Total)) {
+                    document.getElementById('result').textContent = 'Error: Ingrese valores válidos';
+                    document.getElementById('resultBox').className = 'mt-6 p-4 bg-red-100 dark:bg-red-900 rounded-lg';
+                    return;
+                }
+
+                try {
+                    const { result } = calcBer({ Errados, Total });
+                    document.getElementById('result').textContent = result.toFixed(10);
+                    document.getElementById('resultScientific').textContent = `Notación científica: ${result.toExponential(4)}`;
+                    document.getElementById('resultBox').className = 'mt-6 p-4 bg-primary/10 dark:bg-secondary/20 rounded-lg';
+                } catch (e) {
+                    document.getElementById('result').textContent = 'Error: ' + e.message;
+                    document.getElementById('resultScientific').textContent = '';
+                    document.getElementById('resultBox').className = 'mt-6 p-4 bg-red-100 dark:bg-red-900 rounded-lg';
+                }
+            });
+
+            document.getElementById('btnClear').addEventListener('click', () => {
+                document.getElementById('Errados').value = '';
+                document.getElementById('Total').value = '';
+                document.getElementById('result').textContent = '-';
+                document.getElementById('resultScientific').textContent = '';
+                document.getElementById('resultBox').className = 'mt-6 p-4 bg-primary/10 dark:bg-secondary/20 rounded-lg';
+            });
+
+            if (window.renderMathInElement) {
+                setTimeout(() => { renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}] }); }, 100);
+            }
+        });
+    </script>
+</body>
+</html>

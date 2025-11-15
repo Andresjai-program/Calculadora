@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Ondas - TelecomCalc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0F766E',
+                        'secondary': '#FDBA74',
+                        'bg-dark-soft': '#1E293B',
+                        'text-light': '#F8FAFC',
+                        'text-dark': '#1E293B',
+                        'header-footer': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .light-mode { background-color: #F8FAFC; color: #1E293B; }
+        .dark .light-mode { background-color: #1E293B; color: #F8FAFC; }
+        .fade-in { animation: fadeIn 0.35s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        
+        .tab-button {
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .tab-button.active {
+            background: #0F766E;
+            color: white;
+            border-color: #0F766E;
+        }
+        .tab-button:not(.active) {
+            background: #E5E7EB;
+            color: #6B7280;
+        }
+        .dark .tab-button:not(.active) {
+            background: #374151;
+            color: #9CA3AF;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .result-card {
+            background: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .result-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body class="light-mode">
+
+    <header class="sticky top-0 z-40 bg-header-footer shadow-lg dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center w-full">
+            <div class="flex items-center">
+                <a href="index.html" class="flex items-center text-3xl font-bold text-primary dark:text-secondary hover:text-secondary dark:hover:text-primary transition duration-200">
+                    <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zm0 14c-3.313 0-6-2.687-6-6s2.687-6 6-6 6 2.687 6 6-2.687 6-6 6zm-1-8h2v-2h-2v2zm0 4h2v-2h-2v2z"/></svg>
+                    TelecomCalc
+                </a>
+            </div>
+            <div class="flex items-center space-x-3 ml-auto">
+                <button id="themeToggle" class="flex items-center p-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-inner hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300"></button>
+                <a href="index.html" class="px-3 py-2 text-sm font-semibold rounded-full text-white bg-primary dark:bg-secondary hover:bg-teal-700 transition duration-200 shadow-md">Todas las Calculadoras</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <section class="fade-in">
+            <div class="bg-gray-100 dark:bg-gray-700 p-6 rounded-xl shadow-inner mb-6">
+                <h1 class="text-4xl font-extrabold text-primary dark:text-secondary mb-2">📡 Ondas</h1>
+                <p class="text-gray-700 dark:text-gray-300 mb-4 text-base leading-relaxed">
+                    <strong>¿Qué calculamos aquí?</strong><br>
+                    <strong>Longitud de Onda (λ):</strong> Es la distancia entre dos picos consecutivos de una onda electromagnética.<br>
+                    <strong>Frecuencia (F):</strong> Es el número de ciclos de onda que pasan por un punto en un segundo.<br>
+                    <strong>Relación:</strong> A mayor frecuencia, menor longitud de onda (inversamente proporcionales).
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="mb-6">
+                <div class="flex space-x-2 border-b-2 border-gray-300 dark:border-gray-600">
+                    <button class="tab-button active" data-tab="longitud" onclick="switchTab('longitud')">📏 Longitud de Onda</button>
+                    <button class="tab-button" data-tab="frecuencia" onclick="switchTab('frecuencia')">🔄 Frecuencia de Onda</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Panel Izquierdo -->
+                <div class="space-y-6">
+                    <!-- Tab: Longitud de Onda -->
+                    <div id="tab-longitud" class="tab-content active">
+                        <div class="bg-white dark:bg-bg-dark-soft p-6 rounded-lg shadow-md">
+                            <h3 class="text-2xl font-semibold mb-4 text-header-footer dark:text-gray-200">Calcular Longitud de Onda (λ)</h3>
+                            
+                            <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <div class="text-center font-mono text-xl mb-2">
+                                    <span class="font-bold">λ = C / F</span>
+                                </div>
+                                <div class="text-center text-sm text-gray-600 dark:text-gray-400">
+                                    Donde C = 3 × 10⁸ m/s (velocidad de la luz)
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Frecuencia (F)</label>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="frecuencia-input" placeholder="Ingrese la frecuencia" step="any" class="flex-1 p-3 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600">
+                                        <select id="frecuencia-unit" class="p-3 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600">
+                                            <option value="1">Hz</option>
+                                            <option value="1000" selected>kHz</option>
+                                            <option value="1000000">MHz</option>
+                                            <option value="1000000000">GHz</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button onclick="calcularLongitud()" class="w-full py-4 text-xl font-bold rounded-lg text-white bg-secondary hover:bg-orange-500 dark:bg-primary dark:hover:bg-teal-700 transition duration-200 shadow-lg">
+                                    🧮 Calcular Longitud de Onda
+                                </button>
+
+                                <button onclick="limpiarLongitud()" class="w-full py-2 text-sm font-medium rounded-lg text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition duration-200">
+                                    🗑️ Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Frecuencia -->
+                    <div id="tab-frecuencia" class="tab-content">
+                        <div class="bg-white dark:bg-bg-dark-soft p-6 rounded-lg shadow-md">
+                            <h3 class="text-2xl font-semibold mb-4 text-header-footer dark:text-gray-200">Calcular Frecuencia (F)</h3>
+                            
+                            <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <div class="text-center font-mono text-xl mb-2">
+                                    <span class="font-bold">F = C / λ</span>
+                                </div>
+                                <div class="text-center text-sm text-gray-600 dark:text-gray-400">
+                                    Donde C = 3 × 10⁸ m/s (velocidad de la luz)
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Longitud de Onda (λ)</label>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="longitud-input" placeholder="Ingrese la longitud de onda" step="any" class="flex-1 p-3 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600">
+                                        <select id="longitud-unit" class="p-3 border rounded bg-gray-50 dark:bg-gray-700 text-text-dark dark:text-text-light border-gray-300 dark:border-gray-600">
+                                            <option value="1e-12">pm</option>
+                                            <option value="1e-9">nm</option>
+                                            <option value="1e-6">µm</option>
+                                            <option value="0.001">mm</option>
+                                            <option value="0.01">cm</option>
+                                            <option value="1" selected>m</option>
+                                            <option value="1000">km</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button onclick="calcularFrecuencia()" class="w-full py-4 text-xl font-bold rounded-lg text-white bg-secondary hover:bg-orange-500 dark:bg-primary dark:hover:bg-teal-700 transition duration-200 shadow-lg">
+                                    🧮 Calcular Frecuencia
+                                </button>
+
+                                <button onclick="limpiarFrecuencia()" class="w-full py-2 text-sm font-medium rounded-lg text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition duration-200">
+                                    🗑️ Limpiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información -->
+                    <div class="bg-white dark:bg-bg-dark-soft p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-3 text-header-footer dark:text-gray-200">ℹ️ Información</h3>
+                        <div class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                            <p><strong>Velocidad de la luz (C):</strong> 299,792,458 m/s ≈ 3 × 10⁸ m/s</p>
+                            <p><strong>Relación:</strong> λ × F = C</p>
+                            <p><strong>Aplicación:</strong> Útil en diseño de antenas, sistemas de comunicación inalámbrica, fibra óptica, radiofrecuencia, y más.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel Derecho: Resultados -->
+                <div class="space-y-6">
+                    <!-- Resultado Longitud -->
+                    <div id="resultado-longitud" style="display: none;" class="bg-white dark:bg-bg-dark-soft p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-semibold mb-4 text-header-footer dark:text-gray-200">Resultado: Longitud de Onda</h3>
+                        
+                        <div class="result-card">
+                            <div class="text-lg font-semibold">Longitud de Onda (λ)</div>
+                            <div id="valor-longitud" class="result-value">-- m</div>
+                        </div>
+
+                        <div class="mt-6 space-y-3">
+                            <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Valores ingresados:</div>
+                                <div class="space-y-1">
+                                    <div class="flex justify-between">
+                                        <span>Frecuencia (F):</span>
+                                        <span id="display-frecuencia" class="font-bold">--</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Velocidad de la luz (C):</span>
+                                        <span class="font-bold">3 × 10⁸ m/s</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <div class="text-sm font-semibold mb-2">Conversiones útiles:</div>
+                                <div id="conversiones-longitud" class="space-y-1 text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultado Frecuencia -->
+                    <div id="resultado-frecuencia" style="display: none;" class="bg-white dark:bg-bg-dark-soft p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-semibold mb-4 text-header-footer dark:text-gray-200">Resultado: Frecuencia</h3>
+                        
+                        <div class="result-card">
+                            <div class="text-lg font-semibold">Frecuencia (F)</div>
+                            <div id="valor-frecuencia" class="result-value">-- Hz</div>
+                        </div>
+
+                        <div class="mt-6 space-y-3">
+                            <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Valores ingresados:</div>
+                                <div class="space-y-1">
+                                    <div class="flex justify-between">
+                                        <span>Longitud de Onda (λ):</span>
+                                        <span id="display-longitud" class="font-bold">--</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Velocidad de la luz (C):</span>
+                                        <span class="font-bold">3 × 10⁸ m/s</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <div class="text-sm font-semibold mb-2">Conversiones útiles:</div>
+                                <div id="conversiones-frecuencia" class="space-y-1 text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ejemplos -->
+                    <div class="bg-white dark:bg-bg-dark-soft p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-3 text-header-footer dark:text-gray-200">📚 Ejemplos Comunes</h3>
+                        <div class="space-y-3">
+                            <button onclick="cargarEjemplo('wifi')" class="w-full p-3 text-left bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                                <div class="font-semibold">WiFi 2.4 GHz</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">F = 2.4 GHz → λ ≈ 12.5 cm</div>
+                            </button>
+                            <button onclick="cargarEjemplo('wifi5')" class="w-full p-3 text-left bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                                <div class="font-semibold">WiFi 5 GHz</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">F = 5 GHz → λ ≈ 6 cm</div>
+                            </button>
+                            <button onclick="cargarEjemplo('fm')" class="w-full p-3 text-left bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                                <div class="font-semibold">Radio FM (100 MHz)</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">F = 100 MHz → λ ≈ 3 m</div>
+                            </button>
+                            <button onclick="cargarEjemplo('luz')" class="w-full p-3 text-left bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                                <div class="font-semibold">Luz Visible (500 nm)</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">λ = 500 nm → F ≈ 600 THz</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-10 py-6 bg-header-footer dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-300 text-sm">
+            <p>&copy; 2025 TelecomCalc. Contacto: +57 310 4535196</p>
+        </div>
+    </footer>
+
+    <script src="ondas.js"></script>
+</body>
+</html>

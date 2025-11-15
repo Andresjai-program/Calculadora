@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Telecomunicaciones - Inicio</title>
+    <!-- Carga de Tailwind CSS para un diseño responsivo y profesional -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configuración de Tailwind CSS
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0F766E',      // Teal oscuro
+                        'secondary': '#FDBA74',    // Naranja suave
+                        'bg-dark-soft': '#1E293B',
+                        'text-light': '#F8FAFC',
+                        'text-dark': '#1E293B',
+                        'header-footer': '#334155',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Estilos personalizados -->
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; }
+        .light-mode { background-color: #F8FAFC; color: #1E293B; }
+        .dark .light-mode { background-color: #1E293B; color: #F8FAFC; }
+
+        /* Estilos base de la Mini-Calculadora */
+        #miniCalculator {
+            display: grid;
+            grid-template-rows: auto repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+            border-radius: 12px;
+            background-color: var(--calc-bg, #E2E8F0);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        #calcDisplay {
+            grid-column: 1 / -1;
+            background-color: var(--calc-display-bg, #FFFFFF);
+            color: var(--calc-text-color, #1E293B);
+            font-size: 2.5rem;
+            text-align: right;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            min-height: 2.5em; 
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .calc-btn {
+            padding: 15px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .calc-btn:active { transform: scale(0.95); }
+        .calc-btn.number, .calc-btn.decimal { background-color: var(--calc-num-bg, #F1F5F9); color: var(--calc-text-color, #1E293B); }
+        .calc-btn.operator { background-color: var(--calc-op-bg, #38BDF8); color: white; }
+        .calc-btn.clear, .calc-btn.backspace { background-color: var(--calc-clear-bg, #F43F5E); color: white; }
+        .calc-btn.equals { background-color: var(--calc-eq-bg, #10B981); color: white; grid-column: span 2; }
+        .calc-btn:hover { opacity: 0.85; }
+
+        /* Estilos específicos para modo oscuro de la Mini-Calculadora */
+        .dark #miniCalculator {
+            --calc-bg: #334155;
+            --calc-display-bg: #1E293B;
+            --calc-text-color: #F8FAFC;
+            --calc-num-bg: #475569;
+            --calc-op-bg: #0E7490;
+            --calc-clear-bg: #991B1B;
+            --calc-eq-bg: #065F46;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        /* Animación del botón Calcular */
+        @keyframes pulse-ring { 0% { transform: scale(0.3); opacity: 0.8; } 100% { transform: scale(1.5); opacity: 0; } }
+        .pulse-effect { position: relative; }
+        .pulse-effect::before {
+            content: ''; display: block; position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            background-color: currentColor; border-radius: 9999px;
+            animation: pulse-ring 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite; z-index: 0; opacity: 0;
+        }
+        .pulse-effect:hover::before { animation: none; }
+        .pulse-effect > * { position: relative; z-index: 10; }
+        
+        /* Estilo para el contenedor de la imagen de la fórmula (simulación) */
+        .formula-display-box {
+            background-color: #F0F9FF; /* Fondo claro azulado */
+            border: 2px solid #99CCFF;
+            border-radius: 12px;
+            padding: 20px;
+            font-family: monospace;
+            font-size: 1.25rem;
+            text-align: center;
+            font-weight: bold;
+            color: #0F766E;
+        }
+        .dark .formula-display-box {
+            background-color: #1E293B;
+            border-color: #0F766E;
+            color: #FDBA74;
+        }
+    </style>
+</head>
+<body class="light-mode">
+
+    <!-- JavaScript para Manejar la Lógica -->
+    <script>
+        // --- Variables de Estado Global ---
+        let calc = {
+            displayValue: '0',
+            firstOperand: null,
+            waitingForSecondOperand: false,
+            operator: null,
+        };
+        let currentView = 'home'; 
+        let currentFormula = null; 
+        
+        // --- Constantes y Lógica de Fórmulas ---
+        const K_BOLTZMANN = 1.380649e-23; // Constante de Boltzmann (J/K)
+        
+        // Mapeo de IDs de fórmulas a archivos HTML individuales
+        function getFormulaLink(formulaId) {
+            const linkMap = {
+                '1-ancho-de-banda': 'calc-ancho-banda.html',
+                '2-limite-de-shannon': 'calc-shannon.html',
+                '3-potencia-de-ruido-termico': 'calc-potencia-ruido.html',
+                '4-voltaje-de-ruido-termico': 'calc-voltaje-ruido.html',
+                '5-factor-de-ruido': 'calc-factor-ruido.html',
+                '6-indice-de-ruido': 'calc-indice-ruido.html',
+                '7-potencia-dbm': 'calc-potencia-dbm.html',
+                '8-dbm-potencia': 'calc-dbm-potencia.html',
+                '9-presupuesto-de-potencia': 'presupuesto-potencia.html',
+                '10-tasa-de-error-de-bits-ber': 'calc-ber.html',
+                '11-atenuacion-fibra-optica': 'atenuacion-fibra-optica.html',
+                '12-ondas': 'ondas.html',
+                '13-ley-de-snell': 'calc-snell.html',
+                '14-angulo-critico': 'calc-angulo-critico.html'
+            };
+            return linkMap[formulaId] || 'calculadora.html?formula=' + encodeURIComponent(formulaId);
+        }
+
+        const formulas = [
+            { id: '1-ancho-de-banda', title: 'Ancho de Banda', icon: 'BW', description: 'Calcula el rango de frecuencias que una señal ocupa o que un canal puede transportar.',
+              formulaLatex: '$$BW = F_{max} - F_{min}$$' },
+            { id: '2-limite-de-shannon', title: 'Límite de Shannon', icon: 'C', description: 'Calcula la máxima tasa de datos teórica de un canal (bps) en función del Ancho de Banda (B) y la Relación Señal/Ruido (S/N).', formulaLatex: '$$C = B \\log_2 \\left(1 + \\frac{S}{N}\\right)$$' },
+            { id: '3-potencia-de-ruido-termico', title: 'Potencia de Ruido Térmico', icon: 'N', description: 'Determina la potencia de ruido generado por la agitación térmica de electrones en un resistor a una temperatura absoluta (T) y ancho de banda (B).', formulaLatex: '$$N = k T B$$' },
+            { id: '4-voltaje-de-ruido-termico', title: 'Voltaje de Ruido Térmico', icon: 'Vn', description: 'Calcula el voltaje RMS de ruido térmico en un resistor.', formulaLatex: '$$V_n = \\sqrt{4 k T B R}$$' },
+            { id: '5-factor-de-ruido', title: 'Factor de Ruido', icon: 'F', description: 'Mide el deterioro de la Relación Señal/Ruido (SNR) introducido por un componente de un sistema.', formulaLatex: '$$F = \\frac{(S/N)_{in}}{(S/N)_{out}}$$'},
+            { id: '6-indice-de-ruido', title: 'Índice de Ruido', icon: 'NF', description: 'Expresión logarítmica (dB) del Factor de Ruido.', formulaLatex: '$$NF_{(dB)} = 10 \\log_{10}(F)$$' },
+            { id: '7-potencia-dbm', title: 'Potencia → dBm', icon: 'dBm', description: 'Convierte potencia lineal (Watts) a potencia logarítmica (dBm).', formulaLatex: '$$P_{(dBm)} = 10 \\log_{10} \\left(\\frac{P_{(W)}}{1 mW}\\right)$$' },
+            { id: '8-dbm-potencia', title: 'dBm → Potencia', icon: 'W', description: 'Convierte potencia logarítmica (dBm) a potencia lineal (Watts).', formulaLatex: '$$P_{(W)} = 1 mW \\cdot 10^{\\left(\\frac{P_{(dBm)}}{10}\\right)}$$' },
+            { id: '9-presupuesto-de-potencia', title: 'Presupuesto de Potencia', icon: 'PB', description: 'Calcula el presupuesto de potencia incluyendo cables, conectores y divisores, validando contra la potencia mínima requerida.',
+              formulaLatex: '$$P_{rx} = P_{tx} + G_{ant} - L_{prop} - L_{cables} - L_{conectores} - L_{pasivos}$$' },
+            { id: '10-tasa-de-error-de-bits-ber', title: 'Tasa de Error de Bits (BER)', icon: 'BER', description: 'Estima la probabilidad de errores en la transmisión digital.', formulaLatex: '$$BER = \\frac{\\text{Bits Errados}}{\\text{Total de Bits}}$$' },
+            { id: '11-atenuacion-fibra-optica', title: 'Atenuación en Fibra Óptica', icon: 'FO', description: 'Calcula las pérdidas y ganancias en un enlace de fibra óptica para determinar la potencia final recibida.',
+              formulaLatex: '$$P_{RX} = P_{TX} - L_{fibra} - L_{conectores} - L_{empalmes} + G_{amp}$$' },
+            { id: '12-ondas', title: 'Ondas', icon: '📡', description: 'Calcula la Longitud de Onda (λ) y la Frecuencia (F) de ondas electromagnéticas. A mayor frecuencia, menor longitud de onda.',
+              formulaLatex: '$$\\lambda = \\frac{C}{F} \\quad \\text{y} \\quad F = \\frac{C}{\\lambda}$$' },
+            { id: '13-ley-de-snell', title: 'Ley de Snell', icon: 'n', description: 'Relación de ángulos de incidencia y refracción entre dos medios. Permite ingresar índices o velocidades.',
+              formulaLatex: '$$n_1 \\sin\\theta_1 = n_2 \\sin\\theta_2$$' },
+            { id: '14-angulo-critico', title: 'Ángulo Crítico', icon: 'θc', description: 'Para n1>n2, el ángulo mínimo de incidencia para reflexión total interna.',
+              formulaLatex: '$$\\theta_c = \\sin^{-1}\\left( \\frac{n_2}{n_1} \\right)$$' }
+        ];
+
+        // --- Funciones de la Mini-Calculadora (Sin Cambios) ---
+        function updateDisplay() {
+            const display = document.getElementById('calcDisplay');
+            if (!display) return;
+            let value = calc.displayValue;
+            if (value.length > 10 && !value.includes('e')) {
+                const num = parseFloat(value);
+                value = num.toPrecision(10).toString();
+            }
+            value = value.replace(/,/g, '');
+            display.textContent = value;
+        }
+        function inputDigit(digit) {
+            const { displayValue, waitingForSecondOperand } = calc;
+            if (waitingForSecondOperand === true) {
+                calc.displayValue = digit;
+                calc.waitingForSecondOperand = false;
+            } else {
+                calc.displayValue = displayValue === '0' ? digit : displayValue + digit;
+            }
+        }
+        function inputDecimal() {
+            if (calc.waitingForSecondOperand === true) {
+                calc.displayValue = '0.';
+                calc.waitingForSecondOperand = false;
+                return;
+            }
+            if (!calc.displayValue.includes('.')) {
+                calc.displayValue += '.';
+            }
+        }
+        function backspace() {
+            if (calc.waitingForSecondOperand === true) return;
+            const displayValue = calc.displayValue;
+            if (displayValue.length > 1) {
+                calc.displayValue = displayValue.slice(0, -1);
+            } else {
+                calc.displayValue = '0';
+            }
+        }
+        function inputPercent() {
+            const inputValue = parseFloat(calc.displayValue);
+            if (!isNaN(inputValue) && inputValue !== 0) {
+                calc.displayValue = (inputValue / 100).toString();
+            }
+        }
+        function performCalculation(firstOperand, secondOperand, operator) {
+            switch (operator) {
+                case '+': return firstOperand + secondOperand;
+                case '-': return firstOperand - secondOperand;
+                case '*': return firstOperand * secondOperand;
+                case '/': return secondOperand === 0 ? NaN : firstOperand / secondOperand;
+                default: return secondOperand;
+            }
+        }
+        function handleOperator(nextOperator) {
+            const inputValue = parseFloat(calc.displayValue);
+            const { firstOperand, operator, waitingForSecondOperand } = calc;
+            if (operator && waitingForSecondOperand) {
+                calc.operator = nextOperator;
+                return;
+            }
+            if (firstOperand === null) {
+                calc.firstOperand = inputValue;
+            } else if (operator) {
+                const result = performCalculation(firstOperand, inputValue, operator);
+                calc.displayValue = Number.isFinite(result) ? result.toString() : 'Error';
+                calc.firstOperand = result;
+            }
+            calc.waitingForSecondOperand = true;
+            calc.operator = nextOperator;
+        }
+        function resetCalculator() {
+            calc.displayValue = '0';
+            calc.firstOperand = null;
+            calc.waitingForSecondOperand = false;
+            calc.operator = null;
+        }
+        function handleCalcClick(event) {
+            const { target } = event;
+            if (!target.matches('button')) return;
+
+            const buttonText = target.textContent;
+            
+            if (buttonText >= '0' && buttonText <= '9') {
+                inputDigit(buttonText);
+            } else if (buttonText === '.') {
+                inputDecimal();
+            } else if (buttonText === 'AC') {
+                resetCalculator();
+            } else if (buttonText === 'DEL') {
+                backspace();
+            } else if (buttonText === '%') {
+                inputPercent();
+            } else if (target.dataset.action === 'calculate') {
+                if (calc.firstOperand === null || calc.operator === null) {
+                    return;
+                }
+                const result = performCalculation(calc.firstOperand, parseFloat(calc.displayValue), calc.operator);
+                calc.displayValue = Number.isFinite(result) ? result.toString() : 'Error';
+                calc.firstOperand = null;
+                calc.operator = null;
+                calc.waitingForSecondOperand = true;
+                
+            } else {
+                const operator = target.dataset.action === 'add' ? '+' : 
+                                 target.dataset.action === 'subtract' ? '-' :
+                                 target.dataset.action === 'multiply' ? '*' : 
+                                 target.dataset.action === 'divide' ? '/' : null;
+                
+                if (operator) {
+                    handleOperator(operator);
+                }
+            }
+            updateDisplay();
+        }
+        
+        // --- Lógica de la Gráfica (SIMULADA para Shannon) ---
+
+        /**
+         * Dibuja una gráfica simple en el canvas (Capacidad vs. SNR).
+         * Esta es una simulación visual y debe ser reemplazada por una librería de gráficas real.
+         */
+        function drawShannonGraph(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            // Ajustar el canvas al tamaño del contenedor
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            // Aseguramos una altura decente para la gráfica
+            canvas.height = Math.min(400, container.clientWidth * 0.7); 
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Colores basados en el tema
+            const isDark = document.documentElement.classList.contains('dark');
+            const axisColor = isDark ? '#A0AEC0' : '#4A5568';
+            const gridColor = isDark ? '#2D3748' : '#E2E8F0';
+            const graphColor = isDark ? '#FDBA74' : '#0F766E';
+
+            // Dimensiones
+            const W = canvas.width;
+            const H = canvas.height;
+            const PADDING = 40;
+            const GW = W - 2 * PADDING; // Ancho del área de la gráfica
+            const GH = H - 2 * PADDING; // Alto del área de la gráfica
+
+            // Limpiar y Configurar Ejes
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = axisColor;
+            ctx.lineWidth = 2;
+            ctx.font = '12px Inter, sans-serif';
+            ctx.fillStyle = axisColor;
+
+            // Dibujar Ejes X y Y
+            ctx.beginPath();
+            ctx.moveTo(PADDING, PADDING); // Eje Y (arriba)
+            ctx.lineTo(PADDING, H - PADDING); // Eje Y (abajo)
+            ctx.lineTo(W - PADDING, H - PADDING); // Eje X
+            ctx.stroke();
+
+            // Etiquetas de Ejes
+            ctx.fillText('C (bps)', PADDING - 30, PADDING + 5);
+            ctx.fillText('SNR (S/N)', W - PADDING - 30, H - PADDING + 20);
+
+            // Título de la Gráfica
+            ctx.fillStyle = isDark ? '#F8FAFC' : '#1E293B';
+            ctx.font = '16px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Capacidad de Canal (Shannon)', W / 2, 20);
+            
+            // Generar Puntos de la Curva C = B * log2(1 + S/N)
+            // Asumimos B=1 Hz para simplificar la escala
+            const B = 1;
+            const points = [];
+            const MAX_SNR = 20; // Rango de SNR (0 a 20)
+            
+            for (let i = 0; i <= 100; i++) {
+                const snr = (i / 100) * MAX_SNR;
+                const C = B * Math.log2(1 + snr);
+                points.push({ snr, C });
+            }
+
+            // Normalización de Puntos para el Canvas
+            const MAX_C = B * Math.log2(1 + MAX_SNR);
+            
+            ctx.beginPath();
+            ctx.strokeStyle = graphColor;
+            ctx.lineWidth = 3;
+            
+            points.forEach((point, index) => {
+                // Mapear SNR (x) al ancho de la gráfica
+                const x = PADDING + (point.snr / MAX_SNR) * GW;
+                // Mapear Capacidad (y) al alto de la gráfica (invertido)
+                const y = H - PADDING - (point.C / MAX_C) * GH;
+
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+
+            ctx.stroke();
+            
+            // Dibujar punto de operación actual (simulado en el centro)
+            const currentX = PADDING + (MAX_SNR/2 / MAX_SNR) * GW;
+            const currentC = B * Math.log2(1 + MAX_SNR/2);
+            const currentY = H - PADDING - (currentC / MAX_C) * GH;
+            
+            ctx.fillStyle = '#F43F5E';
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.textAlign = 'left';
+            ctx.fillText('Punto Actual', currentX + 8, currentY - 8);
+        }
+
+        // --- Lógica de Navegación y Renderizado (MODIFICADA) ---
+        
+        /**
+         * Renderiza la vista principal (Menú de Fórmulas) o la vista de una Fórmula específica.
+         */
+        function navigateToCalculadora(formulaId) {
+    window.location.href = `calculadora.html?formula=${formulaId}`;
+}
+
+function navigateToCalculadora(formulaId) {
+    window.location.href = `calculadora.html?formula=${formulaId}`;
+}
+
+function renderCalculatorContent() {
+            const container = document.getElementById('telecomCalculatorContent');
+            if (!container) return;
+
+            container.innerHTML = ''; 
+
+            if (currentView === 'home') {
+                // Renderiza el menú de inicio rápido de fórmulas
+                let html = `
+                    <p class="text-gray-600 dark:text-gray-300 mb-6">Selecciona una fórmula para ver su explicación detallada, parámetros de entrada y su gráfica dinámica en tiempo real.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                `;
+
+                formulas.forEach(f => {
+                    html += `
+                        <div class="bg-gray-50 dark:bg-gray-700 p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02] border border-primary/20 dark:border-primary/50 min-h-[180px]">
+                            <div class="flex items-center space-x-4 mb-3">
+                                <span class="text-3xl font-bold text-primary dark:text-secondary p-3 bg-primary/10 dark:bg-secondary/10 rounded-lg">${f.icon}</span>
+                                <h4 class="text-xl font-semibold text-gray-800 dark:text-gray-100">${f.title}</h4>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">${f.description}</p>
+                <a href="${getFormulaLink(f.id)}" 
+                                class="w-full inline-flex py-2 px-4 rounded-lg text-white font-bold bg-primary hover:bg-teal-700 dark:bg-secondary dark:hover:bg-orange-400 transition duration-200 shadow-md justify-center items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19C7.895 19 7 18.105 7 17s.895-2 2-2 2 .895 2 2-.895 2-2 2zM12 4v13m7-6h3"></path></svg>
+                                Ver Ficha y Gráfica
+                            </a>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                container.innerHTML = html;
+                
+            } else if (currentView === 'formula') {
+                // Renderiza la interfaz de cálculo, fórmula y gráfica
+                const formula = formulas.find(f => f.id === currentFormula);
+                if (!formula) return navigateToHome(); 
+
+                const { title, description, formulaLatex } = formula;
+                
+                // Estructura de la Ficha de Cálculo
+                const formulaContent = `
+                    <div class="space-y-4">
+                        <!-- Botón para volver al menú -->
+                        <button onclick="navigateToHome()" class="flex items-center text-primary dark:text-secondary hover:underline font-medium">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            Volver al Menú Principal
+                        </button>
+
+                        <h3 class="text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-6">${title}</h3>
+
+                        <!-- GRID: FÓRMULA, DESCRIPCIÓN Y PARÁMETROS -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 p-6 bg-gray-100 dark:bg-gray-700 rounded-xl shadow-inner">
+                            
+                            <!-- COLUMNA 1: FÓRMULA y DESCRIPCIÓN -->
+                            <div class="lg:col-span-2 space-y-5">
+                                <h4 class="text-xl font-semibold text-primary dark:text-secondary">Fórmula Matemática</h4>
+                                
+                                <!-- Placeholder de la Fórmula (usando notación LaTeX para la apariencia) -->
+                                <div class="formula-display-box">
+                                    <!-- Importante: En un entorno real se usaría MathJax o KaTeX para renderizar esto -->
+                                    ${formulaLatex}
+                                </div>
+                                
+                                <h4 class="text-xl font-semibold text-primary dark:text-secondary mt-6">Descripción Conceptual</h4>
+                                <p class="text-gray-700 dark:text-gray-300 leading-relaxed">${description}</p>
+                            </div>
+
+                            <!-- COLUMNA 2: ENTRADA DE PARÁMETROS -->
+                            <div class="lg:col-span-1 bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md">
+                                <h4 class="text-xl font-semibold mb-4 text-header-footer dark:text-gray-200">Parámetros de Entrada</h4>
+                                <div class="space-y-4">
+                                    <!-- Input 1 (Simulación) -->
+                                    <div class="flex flex-col">
+                                        <label for="param1" class="mb-1 text-sm font-medium dark:text-gray-300">Ancho de Banda B (Hz)</label>
+                                        <input type="number" id="param1" value="1000000" placeholder="Ej: 1000000" class="p-3 border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-600 dark:border-gray-500 dark:text-white transition duration-150">
+                                    </div>
+                                    <!-- Input 2 (Simulación) -->
+                                    <div class="flex flex-col">
+                                        <label for="param2" class="mb-1 text-sm font-medium dark:text-gray-300">Relación S/N (Lineal)</label>
+                                        <input type="number" id="param2" value="100" placeholder="Ej: 100" class="p-3 border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-600 dark:border-gray-500 dark:text-white transition duration-150">
+                                    </div>
+                                    
+                                    <button onclick="calculateAndDraw()" class="w-full py-3 mt-4 text-lg font-bold rounded-lg text-white bg-secondary hover:bg-orange-500 dark:bg-primary dark:hover:bg-teal-700 transition duration-200 shadow-lg transform hover:scale-[1.01]">
+                                        Calcular y Actualizar Gráfica
+                                    </button>
+                                </div>
+                                
+                                <div class="mt-6 p-4 bg-primary/10 dark:bg-secondary/20 rounded-lg">
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-100">Capacidad C (Resultado):</p>
+                                    <p id="formulaResult" class="text-3xl font-extrabold text-primary dark:text-secondary mt-1">10.00 Mbits/s</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN DE GRÁFICA EN TIEMPO REAL -->
+                        <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl">
+                            <h4 class="text-2xl font-extrabold text-header-footer dark:text-gray-200 mb-4">Gráfica en Tiempo Real: ${title}</h4>
+                            <div class="relative w-full overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <!-- CANVAS para la Gráfica (Se dibujará aquí con JS) -->
+                                <canvas id="formulaChartCanvas" class="w-full h-auto"></canvas>
+                            </div>
+                            <p class="text-sm italic text-gray-500 dark:text-gray-400 mt-3">
+                                La gráfica ilustra la relación de la Capacidad (C) con la Relación Señal/Ruido (S/N), mostrando cómo un cambio en los parámetros de entrada afecta el resultado.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML = formulaContent;
+                
+                // Importante: Llamar a la función de dibujo de la gráfica
+                // La llamamos después de que el DOM se ha actualizado.
+                setTimeout(() => {
+                    // Solo dibujamos la simulación para Shannon, ya que es el ejemplo más claro.
+                    if (currentFormula === 'shannon') {
+                        drawShannonGraph('formulaChartCanvas');
+                    } else {
+                        // Para otras fórmulas, se mostraría un mensaje o se dibujaría otra gráfica específica.
+                        const canvas = document.getElementById('formulaChartCanvas');
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#A0AEC0' : '#4A5568';
+                        ctx.font = '16px Inter, sans-serif';
+                        ctx.fillText(`Gráfica para ${title} Pendiente de Implementación`, canvas.width / 2, canvas.height / 2);
+                    }
+                }, 50);
+            }
+        }
+        
+        /**
+         * Función simulada para calcular Shannon y redibujar la gráfica.
+         */
+        function calculateAndDraw() {
+            if (currentFormula === 'shannon') {
+                const B_input = document.getElementById('param1');
+                const S_N_input = document.getElementById('param2');
+                const resultDisplay = document.getElementById('formulaResult');
+
+                const B = parseFloat(B_input.value);
+                const SN = parseFloat(S_N_input.value);
+
+                if (isNaN(B) || isNaN(SN) || B <= 0 || SN < 0) {
+                    resultDisplay.textContent = 'Error: Ingrese valores válidos.';
+                    return;
+                }
+
+                // C = B * log2(1 + S/N)
+                const C = B * Math.log2(1 + SN);
+                
+                // Formato simple de resultado (ej: 1000000 -> 1 Mbps)
+                let formattedC;
+                if (C >= 1e9) {
+                    formattedC = (C / 1e9).toFixed(2) + ' Gbits/s';
+                } else if (C >= 1e6) {
+                    formattedC = (C / 1e6).toFixed(2) + ' Mbits/s';
+                } else if (C >= 1e3) {
+                    formattedC = (C / 1e3).toFixed(2) + ' kbits/s';
+                } else {
+                    formattedC = C.toFixed(2) + ' bits/s';
+                }
+                
+                resultDisplay.textContent = formattedC;
+                
+                // Redibujar la gráfica (solo para simular la actualización)
+                drawShannonGraph('formulaChartCanvas');
+
+            } else {
+                // Aquí iría la lógica para las otras 9 fórmulas
+                console.log(`Calculando ${currentFormula}...`);
+                document.getElementById('formulaResult').textContent = 'Calculando...';
+            }
+        }
+
+        // --- Navegación y Tema (Sin Cambios en la funcionalidad) ---
+        function navigateToHome() {
+            currentView = 'home';
+            currentFormula = null;
+            renderCalculatorContent();
+            document.getElementById('calculadora').scrollIntoView({ behavior: 'smooth' });
+        }
+        function navigateToFormula(formulaId) {
+            currentView = 'formula';
+            currentFormula = formulaId;
+            renderCalculatorContent();
+            document.getElementById('calculadora').scrollIntoView({ behavior: 'smooth' });
+        }
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDarkMode = html.classList.toggle('dark');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            updateThemeButton();
+        }
+
+        function updateThemeButton() {
+            const themeToggleBtn = document.getElementById('themeToggle');
+            if (!themeToggleBtn) return;
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            themeToggleBtn.innerHTML = isDarkMode 
+                ? '<svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3a9 9 0 009 9c0 4.54-3.52 8.44-8.45 8.97a.75.75 0 01-.8-.85c.17-1.13.25-2.3.25-3.47a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75c0 1.17-.08 2.34-.25 3.47a.75.75 0 01-.8.85C6.52 20.44 3 16.54 3 12a9 9 0 019-9z"/></svg> Modo Claro' 
+                : '<svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.885 18.885c.38.38.38 1.02.042 1.358-.337.337-1.02.34-1.358.042l-1.597-1.597a1.06 1.06 0 011.554-1.423l1.414 1.414zM21 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM12 18.75a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5h2.25a.75.75 0 01.75.75zM5.132 18.885l-1.597-1.597a1.06 1.06 0 011.554-1.423l1.414 1.414c.38.38.38 1.02.042 1.358-.337.337-1.02.34-1.358.042zM3 12a.75.75 0 01.75.75h2.25a.75.75 0 010-1.5H3a.75.75 0 01-.75.75zM12 6.75a.75.75 0 01-.75-.75V3.75a.75.75 0 011.5 0v2.25a.75.75 0 01-.75.75z"/></svg> Modo Oscuro';
+        }
+        function handleGlobalCalculate() {
+            document.getElementById('calculadora').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- Inicialización ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            // Actualizar la UI del botón sin hacer toggle inmediato
+            updateThemeButton();
+            
+            const calcButtons = document.getElementById('calcButtons');
+            if (calcButtons) {
+                calcButtons.addEventListener('click', handleCalcClick);
+            }
+            updateDisplay();
+            
+            const calcBtnHdr = document.getElementById('calculateButtonHeader');
+            if (calcBtnHdr) calcBtnHdr.addEventListener('click', handleGlobalCalculate);
+            const themeBtn = document.getElementById('themeToggle');
+            if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+            // Renderizar la vista inicial
+            renderCalculatorContent();
+            
+            // Manejar redimensionamiento para que la gráfica sea responsiva
+            window.addEventListener('resize', () => {
+                if (currentView === 'formula' && currentFormula === 'shannon') {
+                    drawShannonGraph('formulaChartCanvas');
+                }
+            });
+
+            // ---------- BÚSQUEDA RÁPIDA: mostrar lista de fórmulas y navegar ----------
+            const searchInput = document.getElementById('formulaSearch');
+            const dropdown = document.getElementById('searchDropdown');
+            if (searchInput && dropdown) {
+                function buildList(filter = '') {
+                    const q = filter.trim().toLowerCase();
+                    dropdown.innerHTML = '';
+                    const matches = formulas.filter(f => f.title.toLowerCase().includes(q) || f.id.toLowerCase().includes(q));
+                    for (const f of matches) {
+                        const item = document.createElement('button');
+                        item.type = 'button';
+                        item.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition';
+                        item.textContent = f.title;
+                        item.addEventListener('click', () => {
+                            // Navegar a la ficha usando id para consistencia
+                            window.location.href = getFormulaLink(f.id);
+                        });
+                        dropdown.appendChild(item);
+                    }
+                    if (matches.length === 0) {
+                        const none = document.createElement('div');
+                        none.className = 'px-4 py-3 text-sm text-gray-500';
+                        none.textContent = 'No se encontraron fórmulas';
+                        dropdown.appendChild(none);
+                    }
+                }
+
+                searchInput.addEventListener('focus', () => { buildList(''); dropdown.classList.remove('hidden'); });
+                searchInput.addEventListener('input', (e) => { buildList(e.target.value); dropdown.classList.remove('hidden'); });
+                // click outside to close
+                document.addEventListener('click', (e) => {
+                    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden');
+                });
+                // keyboard navigation: Enter selects first
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        const first = dropdown.querySelector('button');
+                        if (first) first.click();
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- HEADER: Fijo y Diferenciado -->
+    <header class="sticky top-0 z-40 bg-header-footer shadow-lg dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            
+            <!-- Logo a la izquierda, barra de búsqueda centrada y controles a la derecha -->
+            <div class="flex items-center w-full">
+                <div class="flex items-center">
+                    <a href="#inicio" class="flex items-center text-3xl font-bold text-primary dark:text-secondary hover:text-secondary dark:hover:text-primary transition duration-200">
+                        <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zm0 14c-3.313 0-6-2.687-6-6s2.687-6 6-6 6 2.687 6 6-2.687 6-6 6zm-1-8h2v-2h-2v2zm0 4h2v-2h-2v2z"/></svg>
+                        TelecomCalc
+                    </a>
+                </div>
+
+                <!-- Barra de Búsqueda (Centrada) -->
+                <div class="hidden lg:block flex-grow max-w-lg mx-auto">
+                    <div class="relative">
+                        <input id="formulaSearch" type="text" placeholder="Buscar fórmulas, términos o ayuda..." 
+                               class="w-full p-2 pl-10 rounded-full bg-gray-600 dark:bg-gray-700 text-white placeholder-gray-400 border border-transparent focus:border-primary focus:ring-1 focus:ring-primary transition duration-200" autocomplete="off">
+                        <div id="searchDropdown" class="absolute left-0 mt-12 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden z-50 max-h-64 overflow-auto"></div>
+                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </div>
+
+                <!-- Controles a la derecha -->
+                <div class="flex items-center space-x-3 ml-auto">
+                    <button id="themeToggle" class="flex items-center p-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-inner hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300">
+                        <!-- Icono y texto se actualizan en JS -->
+                    </button>
+                    <a href="pqrs.html" class="hidden sm:inline-block px-3 py-2 text-sm font-semibold rounded-full text-white bg-secondary dark:bg-orange-600 hover:bg-orange-500 transition duration-200 shadow-md">
+                        PQRS
+                    </a>
+                    <a id="calculateButtonHeader" href="#calculadora" class="pulse-effect inline-flex items-center bg-primary dark:bg-secondary text-white dark:text-bg-dark-soft font-bold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transition duration-200 ease-in-out transform hover:scale-105">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-3 3v6m0 0h-2m2 0h2m-6-4h6"/></svg>
+                            Calcular
+                        </span>
+                    </a>
+                </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT (BODY) -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <!-- (El control de tema fue movido al header para consistencia) -->
+
+        <!-- SECCIÓN DE INICIO (Mini-Calculadora) -->
+        <section id="inicio" class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            
+            <!-- Columna Izquierda: Descripción Desplegable -->
+            <div class="space-y-6">
+                <h2 class="text-4xl font-extrabold text-primary dark:text-secondary mb-4">
+                    Asistente Digital para Telecomunicaciones
+                </h2>
+                <p class="text-lg text-gray-600 dark:text-gray-300">
+                    Bienvenido a su herramienta esencial. Analice enlaces, ruido y capacidad de canal con precisión y una interfaz intuitiva.
+                </p>
+
+                <!-- Acordeón de Información -->
+                <div class="space-y-3">
+                    <details class="group rounded-xl p-4 shadow-md dark:shadow-xl bg-white dark:bg-bg-dark-soft/80 border border-gray-200 dark:border-gray-700 transition duration-300">
+                        <summary class="flex justify-between items-center font-semibold text-lg cursor-pointer text-primary dark:text-secondary">
+                            Qué es esta Calculadora <svg class="w-5 h-5 ml-2 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-gray-700 dark:text-gray-300">
+                            Esta es una herramienta interactiva diseñada para estudiantes y profesionales de telecomunicaciones. Simplifica el cálculo de parámetros fundamentales como la Capacidad de Shannon, el Ruido Térmico y los Presupuestos de Enlace. Permite concentrarse en el análisis conceptual en lugar de la manipulación algebraica.
+                        </div>
+                    </details>
+                    
+                    <details class="group rounded-xl p-4 shadow-md dark:shadow-xl bg-white dark:bg-bg-dark-soft/80 border border-gray-200 dark:border-gray-700 transition duration-300">
+                        <summary class="flex justify-between items-center font-semibold text-lg cursor-pointer text-primary dark:text-secondary">
+                            Cómo Funciona la Interfaz <svg class="w-5 h-5 ml-2 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-gray-700 dark:text-gray-300">
+                            Simplemente navegue a la sección "Calculadora", elija la fórmula que necesita, introduzca sus valores y presione "Calcular". La aplicación maneja automáticamente los prefijos métricos (nano, micro, mili, Kilo, Mega, Giga) y le ofrece visualizaciones gráficas cuando es posible.
+                        </div>
+                    </details>
+
+                    <details class="group rounded-xl p-4 shadow-md dark:shadow-xl bg-white dark:bg-bg-dark-soft/80 border border-gray-200 dark:border-gray-700 transition duration-300">
+                        <summary class="flex justify-between items-center font-semibold text-lg cursor-pointer text-primary dark:text-secondary">
+                            Fórmulas Clave Incluidas <svg class="w-5 h-5 ml-2 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </summary>
+                        <div class="mt-3 text-gray-700 dark:text-gray-300">
+                            Incluye 10 fórmulas esenciales como Ancho de Banda, Límite de Shannon, Potencia de Ruido Térmico, Factor de Ruido, Conversiones de dBm/W, Presupuesto de Potencia del Receptor (Enlace) y Tasa de Error de Bits (BER).
+                            <p class="mt-2 text-sm italic">Cada fórmula incluye una descripción técnica detallada, su ecuación y un video explicativo.</p>
+                        </div>
+                    </details>
+                </div>
+
+            </div>
+
+            <!-- Columna Derecha: Mini-Calculadora Interactiva (FUNCIONAL) -->
+            <div class="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-3xl">
+                <h3 class="text-2xl font-semibold mb-6 text-header-footer dark:text-gray-200">Mini Calculadora Sencilla</h3>
+                
+                <div id="miniCalculator" class="w-full max-w-xs transition duration-300">
+                    <div id="calcDisplay" class="text-4xl">0</div>
+                    
+                    <div id="calcButtons" class="contents">
+                        <!-- Primera Fila -->
+                        <button class="calc-btn clear" data-action="clear">AC</button>
+                        <button class="calc-btn backspace" data-action="backspace">DEL</button>
+                        <button class="calc-btn operator" data-action="percent">%</button>
+                        <button class="calc-btn operator" data-action="divide">/</button>
+                        
+                        <!-- Segunda Fila -->
+                        <button class="calc-btn number">7</button>
+                        <button class="calc-btn number">8</button>
+                        <button class="calc-btn number">9</button>
+                        <button class="calc-btn operator" data-action="multiply">*</button>
+                        
+                        <!-- Tercera Fila -->
+                        <button class="calc-btn number">4</button>
+                        <button class="calc-btn number">5</button>
+                        <button class="calc-btn number">6</button>
+                        <button class="calc-btn operator" data-action="subtract">-</button>
+                        
+                        <!-- Cuarta Fila -->
+                        <button class="calc-btn number">1</button>
+                        <button class="calc-btn number">2</button>
+                        <button class="calc-btn number">3</button>
+                        <button class="calc-btn operator" data-action="add">+</button>
+                        
+                        <!-- Quinta Fila -->
+                        <button class="calc-btn number">0</button>
+                        <button class="calc-btn decimal" data-action="decimal">.</button>
+                        <button class="calc-btn equals" data-action="calculate">=</button>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+        
+        <!-- SECCIÓN PRINCIPAL DE CÁLCULO (Menú de Inicio Rápido) -->
+        <section id="calculadora" class="mt-16 pt-10 border-t border-gray-300 dark:border-gray-700">
+            <h2 class="text-4xl font-extrabold text-primary dark:text-secondary mb-8">
+                Selección Rápida de Fórmulas de Telecomunicaciones
+            </h2>
+            <div id="telecomCalculatorContent" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg min-h-[300px]">
+                <!-- Contenido cargado por JavaScript (Menú de Fórmulas o Interfaz de Cálculo) -->
+            </div>
+        </section>
+        
+        <!-- PQRS y Mas Información (Placeholders) -->
+        <div id="pqrs" class="pt-10"></div>
+        <div id="info" class="pt-10"></div>
+
+    </main>
+
+    <!-- FOOTER: Fijo y Diferenciado -->
+    <footer class="mt-10 py-6 bg-header-footer dark:bg-gray-900 transition duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-gray-300 text-sm">
+            
+            <!-- Botón de Descarga -->
+            <button class="flex items-center space-x-2 px-4 py-2 rounded-lg bg-primary dark:bg-secondary text-white dark:text-bg-dark-soft font-semibold hover:opacity-90 transition duration-200 mb-4 sm:mb-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span>Descargar Manual (PDF)</span>
+            </button>
+            
+            <!-- Info Legal y Contacto -->
+            <div class="text-center sm:text-left space-y-1">
+                <p>&copy; Copyright 2025. Todos los derechos reservados.</p>
+                <p>Contacto: <span class="text-secondary dark:text-primary font-mono">+57 310 4535196</span></p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
